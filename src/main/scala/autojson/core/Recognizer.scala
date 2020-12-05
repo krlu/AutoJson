@@ -1,3 +1,5 @@
+package autojson.core
+
 import scala.reflect.ClassTag
 
 object Recognizer {

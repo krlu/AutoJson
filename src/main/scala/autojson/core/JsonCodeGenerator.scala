@@ -1,6 +1,10 @@
+package autojson.core
+
 import java.io.File
 import java.util
 
+import org.json4s._
+import org.json4s.native.{Json, Serialization}
 import spoon.Launcher
 import spoon.reflect.CtModel
 import spoon.reflect.declaration.{CtElement, CtField, CtType}
@@ -10,6 +14,7 @@ import spoon.reflect.visitor.filter.TypeFilter
 import scala.jdk.CollectionConverters._
 
 object JsonCodeGenerator {
+
 
   /**
    * Pseudocode:
@@ -31,19 +36,12 @@ object JsonCodeGenerator {
    */
 
   def main(args: Array[String]): Unit = {
-    val x = new TestClass(1, 2)
-    val path = "src/main/java/TestClass.java"
-    val ontology = buildOntology(path)
-    println(ontology)
-    val serializerIndices = "src/main/java"
-//    // path to a file containing names of all existing serializers
-    println(generateSerializationCode(x, path, serializerIndices))
   }
 
   private def filter[T <: CtElement](c: Class[T]): TypeFilter[T] = new TypeFilter[T](c)
 
   /**
-   * @param path - path to source code 
+   * @param path - path to source code
    * @return List of pairs (filedName, typeName)
    */
   private def getFields(path: String): Seq[(String, CtTypeReference[Any])] = {
@@ -80,36 +78,52 @@ object JsonCodeGenerator {
   }
 
   def generateSerializationCode(obj: Any, path: String, serializerIndices: String): String = {
-    println(serializerIndices)
-    val objTypeName = obj.getClass.getName
+    val objTypeName = obj.getClass.getSimpleName
     val fieldNames: Seq[(String, CtTypeReference[Any])] = getFields(path)
     val innerMap = fieldNames.map { case (fieldName, fieldType) =>
       val isArray = fieldType.getSimpleName.contains("[]")
-      val x = fieldType.getDirectChildren.asScala.toList
-        .filter(Recognizer.recognize[CtTypeReference[Any]](_))
-        .map(_.asInstanceOf[CtTypeReference[Any]].getSimpleName)
+
       val superInterfaces = fieldType.getSuperInterfaces.asScala.toList
       val isCollection = superInterfaces.exists(_.getSimpleName == "Collection")
+      val isMap = fieldType.getSimpleName == "Map"
+
       val fieldValue =
         if(isArray || isCollection){
-          s"""
-             |    $fieldName.asScala.toList.map{ data =>
+          s"""    $fieldName.asScala.toList.map{ data =>
              |      mapFieldsForData(data)
              |    }
              |  """.stripMargin
         }
+        else if(isMap) {
+          val typeParams = fieldType.getDirectChildren.asScala.toArray
+            .filter(Recognizer.recognize[CtTypeReference[Any]](_))
+            .map(_.asInstanceOf[CtTypeReference[Any]].getSimpleName)
+          val keyType = typeParams(0)
+          val valType = typeParams(1)
+          val keySerializationCode = if(isPrimitive(keyType)) "key" else s"mapFieldsFor$keyType(key)"
+          val valSerializationCode = if(isPrimitive(valType)) "value" else s"mapFieldsFor$valType(value)"
+
+          s"""
+             |    castedObj.$fieldName.asScala.toList.map{ case (key, value) =>
+             |      Map("key" -> $keySerializationCode, "value" -> $valSerializationCode)
+             |    }
+             |  """.stripMargin
+        }
         else s"castedObj.$fieldName"
-      s"""\"$fieldName\" -> $fieldValue"""
+      s"""\"$fieldName\"->$fieldValue"""
     }.mkString(",")
     val programToGenerate: String =
-      s"""def mapFieldsFor$objTypeName(obj: Any): Map[String, Any] = {
+      s"""def mapFieldsFor$objTypeName(obj: Any): String = {
          |  val castedObj = obj.asInstanceOf[$objTypeName]
-         |  Map($innerMap)
+         |  val map = Map($innerMap)
+         |  Json(DefaultFormats).write(map)
          |}""".stripMargin
     programToGenerate
   }
 
-
+  def isPrimitive(typeString: String): Boolean = {
+    List("int", "string", "float", "double", "integer").contains(typeString.toLowerCase)
+  }
 
   /**
    * @param path - to src of java files
@@ -143,4 +157,3 @@ object JsonCodeGenerator {
   }
 
 }
-
