@@ -12,15 +12,16 @@ class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
     // path to a file containing names of all existing serializers
     val codeString: String = generateSerializationCode(x, path, serializerIndices)
 
-    val gt2 = """def mapFieldsForTestClass(obj: Any): String = {
-                |  val castedObj = obj.asInstanceOf[TestClass]
-                |  val map = Map("a"->castedObj.a,"b"->castedObj.b,"c"->
-                |    castedObj.c.asScala.toList.map{ case (key, value) =>
-                |      Map("key" -> key, "value" -> value)
-                |    }
-                |  )
-                |  Json(DefaultFormats).write(map)
-                |}""".stripMargin
-    assert(codeString == gt2)
+    val gtString =
+    """def mapFieldsForTestClass(obj: Any): String = {
+      |  val castedObj = obj.asInstanceOf[TestClass]
+      |  val map = Map("a"->castedObj.a,"b"->castedObj.b,"c"->
+      |    castedObj.c.asScala.toList.map{ case (key, value) =>
+      |      Map("key" -> key, "value" -> value)
+      |    }
+      |  )
+      |  Json(DefaultFormats).write(map)
+      |}""".stripMargin
+    codeString shouldEqual gtString
   }
 }
