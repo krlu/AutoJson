@@ -1,6 +1,6 @@
 package autojson.core
 
-import java.io.File
+import java.io.{File, FileWriter}
 import java.util
 
 import autojson.core.Utils._
@@ -13,12 +13,14 @@ object JsonCodeGenerator {
 
 
   /**
+   * Input: ObjToConvert, pathToObject, pathToSerializers
    * Pseudocode:
    * - Base case: All fields are int, string, double, or float
    * - Recursive case 1: Object Type
    *    - if object type is an interface, how do we get the actual data?
    *      - find all implementing classes by search src directory tree under src/main/java
    *      - generate sub-serializer for each class
+   *          - Add serializer to serializers directory (
    *          - NOTE: we will use multiple dispatch on a main method that utilizes on of the sub-serializer
    * -    If check if serializer for said object already exists
    *          If serializer does not exist create serializer for said object once
@@ -29,23 +31,21 @@ object JsonCodeGenerator {
    *      - Within iteration, determine
    * - Recursive case 3: Map Type
    *      - Map[A,B] => {"key": A, "value: B}
+   *Output: JsonString
    */
 
-  def main(args: Array[String]): Unit = {
+  def saveSerializerCode(serializersPath: String, codeString: String, typeName: String, packageStr: String): Unit = {
+    val fw = new FileWriter(serializersPath + s"/${typeName}Serializer.scala", true)
+
+    fw.append(s"package ${packageStr}\n")
+    fw.append(codeString)
+    fw.close()
   }
 
-  def getMethodForClass(obj: TestClass, serializersIndices: String): Option[String] = {
-    val file = io.Source.fromFile(serializersIndices)
-    val methodOpt = file.getLines().toList.find(methodName =>
-      methodName.contains(obj.getClass.getName))
-    file.close()
-    methodOpt
-  }
-
-  def generateSerializationCode(obj: Any, path: String, serializerIndices: String): String = {
+  def generateSerializationCode(obj: Any, path: String): (String, String) = {
     val objTypeName = obj.getClass.getSimpleName
     val fieldNames: Seq[(String, CtTypeReference[Any])] = getFields(path)
-    val serializerNamePrefix = s"mapFieldsFor"
+    val methodName = s"toJson"
 
     val innerMap = fieldNames.map { case (fieldName, fieldType) =>
       val isArray = fieldType.getSimpleName.contains("[]")
@@ -53,7 +53,6 @@ object JsonCodeGenerator {
       val superInterfaces = fieldType.getSuperInterfaces.asScala.toList
       val isCollection = superInterfaces.exists(_.getSimpleName == "Collection")
       val isMap = fieldType.getSimpleName == "Map"
-
       val fieldValue =
         if(isArray || isCollection){
           s"""    $fieldName.asScala.toList.map{ data =>
@@ -67,25 +66,30 @@ object JsonCodeGenerator {
             .map(_.asInstanceOf[CtTypeReference[Any]].getSimpleName)
           val keyType = typeParams(0)
           val valType = typeParams(1)
-          val keySerializationCode = if(isPrimitive(keyType)) "key" else s"$serializerNamePrefix$keyType(key)"
-          val valSerializationCode = if(isPrimitive(valType)) "value" else s"$serializerNamePrefix$valType(value)"
+          val keySerializationCode = if(isPrimitive(keyType)) "key" else s"${keyType}Serializer.$methodName(key)"
+          val valSerializationCode = if(isPrimitive(valType)) "value" else s"${valType}(value)Serializer.${methodName}"
 
           s"""
-             |    castedObj.$fieldName.asScala.toList.map{ case (key, value) =>
-             |      Map("key" -> $keySerializationCode, "value" -> $valSerializationCode)
-             |    }
-             |  """.stripMargin
+             |      castedObj.$fieldName.asScala.toList.map{ case (key, value) =>
+             |        Map("key" -> $keySerializationCode, "value" -> $valSerializationCode)
+             |      }""".stripMargin
         }
         else s"castedObj.$fieldName"
       s"""\"$fieldName\"->$fieldValue"""
     }.mkString(",")
-    val programToGenerate: String =
-      s"""def $serializerNamePrefix$objTypeName(obj: Any): String = {
-         |  val castedObj = obj.asInstanceOf[$objTypeName]
-         |  val map = Map($innerMap)
-         |  Json(DefaultFormats).write(map)
+    val serializerCode: String =
+      s"""import org.json4s.DefaultFormats
+         |import org.json4s.native.Json
+         |import scala.jdk.CollectionConverters._
+         |
+         |object ${objTypeName}Serializer{
+         |  def $methodName(obj: Any): String = {
+         |    val castedObj = obj.asInstanceOf[$objTypeName]
+         |    val map = Map($innerMap)
+         |    Json(DefaultFormats).write(map)
+         |  }
          |}""".stripMargin
-    programToGenerate
+    (serializerCode, objTypeName)
   }
 
 
