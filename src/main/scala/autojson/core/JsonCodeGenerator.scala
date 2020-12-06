@@ -5,7 +5,7 @@ import java.util
 
 import autojson.core.Utils._
 import spoon.reflect.CtModel
-import spoon.reflect.declaration.CtField
+import spoon.reflect.declaration.{CtClass, CtField, CtInterface}
 import spoon.reflect.reference.CtTypeReference
 
 import scala.jdk.CollectionConverters._
@@ -36,13 +36,16 @@ object JsonCodeGenerator {
    */
 
   def main(args: Array[String]): Unit = {
-    val test = new TestClass(1,2)
-//    println(TestClassSerializer.toJson(test))
+    val model = getAST("src/main/java/autojson/core/TestInterface.java").orNull
+    model.getElements(filter(classOf[CtInterface[Any]])).asScala.foreach{ e =>
+      println(e.getSimpleName)
+    }
+
   }
 
   def saveSerializerCode(serializersPath: String, codeString: String, typeName: String, packageStr: String): Unit = {
     val fw = new FileWriter(serializersPath + s"/${typeName}Serializer.scala", true)
-    fw.append(s"package ${packageStr}\n")
+    fw.append(s"package $packageStr\n")
     fw.append(codeString)
     fw.close()
   }
@@ -53,6 +56,8 @@ object JsonCodeGenerator {
   }
 
   private def generateSerializationCodeWithObjName(objTypeName: String, path: String, serializersPath: String): (String, String) = {
+    if(!path.contains(objTypeName))
+      throw new IllegalArgumentException(s"path $path does not contain $objTypeName.java")
     val model = getAST(path).orNull
     val fieldNames: Seq[(String, CtTypeReference[Any])] = getFields(model)
     val toMapName = "toMap"
@@ -74,7 +79,7 @@ object JsonCodeGenerator {
             case Some(name) => name
           }
           if(!serializerExists(paramTypeName, existingSerializers)){
-            // TODO: create new serializer for paramNameType
+            generateSerializerForField(paramTypeName, serializersPath)
           }
           val collElementSerializerCode = if(isPrimitive(paramTypeName)) "data" else s"${paramTypeName}Serializer.$toMapName(data)"
           s"""
@@ -92,29 +97,24 @@ object JsonCodeGenerator {
           val keyType = typeParamNames(0)
           val valType = typeParamNames(1)
           if(!serializerExists(keyType, existingSerializers)){
-            // TODO: create new serializer for keyType
+            generateSerializerForField(keyType, serializersPath)
           }
           if(!serializerExists(valType, existingSerializers)){
-            // TODO: create new serializer for valType
+            generateSerializerForField(valType, serializersPath)
           }
           val keySerializationCode = if(isPrimitive(keyType)) "key" else s"${keyType}Serializer.$toMapName(key)"
-          val valSerializationCode = if(isPrimitive(valType)) "value" else s"${valType}(value)Serializer.${toMapName}"
+          val valSerializationCode = if(isPrimitive(valType)) "value" else s"${valType}Serializer.$toMapName(value)"
           s"""
              |      castedObj.$fieldName.asScala.toList.map{ case (key, value) =>
              |        Map("key" -> $keySerializationCode, "value" -> $valSerializationCode)
              |      }""".stripMargin
         }
-        // if the field is some complexType, we call to the serializer for said object
+        // if the field is some complex type, we call to the serializer for said object
         // if their serializers don't exist yet, we create a serializer for said object on the spot
+        // if type is abstract class or interface, we generate all serializers and use multiple dispatch
         else if(!isPrimitive(fieldTypeName)) {
           if(!serializerExists(fieldTypeName, existingSerializers)){
-            // TODO: create new serializer for keyType
-            listJavaFiles("src/main/java").find{ file =>
-              file.getName == s"$fieldTypeName.java"
-            } match {
-              case Some(file) => println(file.getAbsolutePath)
-              case None =>
-            }
+            generateSerializerForField(fieldTypeName, serializersPath)
           }
           s"${fieldTypeName}Serializer.$toMapName(castedObj.$fieldName)"
         } // all other cases, field is primitive, in which case serialization is trivial
@@ -122,6 +122,12 @@ object JsonCodeGenerator {
           s"castedObj.$fieldName"
       s"""\"$fieldName\"->$fieldValue"""
     }.mkString(",")
+    val formattedMap =
+      if(innerMap.length > 80) {
+        s"""Map($innerMap, "className" -> "$objTypeName"
+           |    )""".stripMargin
+      } else
+        s"""Map($innerMap, "className" -> "$objTypeName")""".stripMargin
     val serializerCode: String =
       s"""import org.json4s.DefaultFormats
          |import org.json4s.native.Json
@@ -131,8 +137,7 @@ object JsonCodeGenerator {
          |object ${objTypeName}Serializer{
          |  def $toMapName(obj: Any): Map[String, Any] = {
          |    val castedObj = obj.asInstanceOf[$objTypeName]
-         |    Map($innerMap
-         |    )
+         |    $formattedMap
          |  }
          |  def toJson(obj : Any): String = {
          |    val map = $toMapName(obj)
@@ -140,6 +145,25 @@ object JsonCodeGenerator {
          |  }
          |}""".stripMargin
     (serializerCode, objTypeName)
+  }
+
+  def isInterface(objTypeName: String, model: CtModel): Boolean =
+    model.getElements(filter(classOf[CtInterface[Any]])).asScala.exists{e => e.getSimpleName == objTypeName}
+
+  def isAbstractClass(objTypeName: String, model: CtModel): Boolean =
+    model.getElements(filter(classOf[CtClass[Any]])).asScala.exists{e => e.getSimpleName == objTypeName && e.isAbstract}
+
+  def generateSerializerForField(fieldTypeName: String, serializersPath: String): Unit = {
+    // assuming that the root of all java programs is src/main/java
+    listJavaFiles("src/main/java").find{ file =>
+      file.getName == s"$fieldTypeName.java"
+    } match {
+      case Some(file) => println(file.getAbsolutePath)
+        val (code, _) = generateSerializationCodeWithObjName(fieldTypeName, file.getAbsolutePath, serializersPath)
+        // TODO: perhaps convert serializers path into package path to avoid hard coding?
+        saveSerializerCode(serializersPath, code, fieldTypeName, "autojson.core.serializers")
+      case None =>
+    }
   }
 
   private def serializerExists(objTypeName: String, existingSerializers: List[String]): Boolean =

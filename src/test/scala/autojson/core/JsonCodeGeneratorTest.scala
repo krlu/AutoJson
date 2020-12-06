@@ -29,7 +29,7 @@ class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
       |      },"d"->
       |      castedObj.d.asScala.toList.map{ data =>
       |        data
-      |      },"e"->TestClass2Serializer.toMap(castedObj.e)
+      |      },"e"->TestClass2Serializer.toMap(castedObj.e), "className" -> "TestClass"
       |    )
       |  }
       |  def toJson(obj : Any): String = {
@@ -39,9 +39,11 @@ class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
       |}""".stripMargin
     codeString shouldEqual gtString
     methodName shouldEqual "TestClass"
-    val file = new File(serializerPath + s"/${methodName}Serializer.scala")
-    assert(file.exists())
-    file.delete()
-    assert(!file.exists())
+    for(name <- List("TestClass", "TestClass2")){
+      val file = new File(serializerPath + s"/${name}Serializer.scala")
+      assert(file.exists())
+      file.delete()
+      assert(!file.exists())
+    }
   }
 }

@@ -1,4 +1,4 @@
 package autojson.core;
 
-public class TestSuperClass {
+public abstract class TestSuperClass {
 }
