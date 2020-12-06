@@ -9,23 +9,31 @@ class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
   "JsonCodeGenerator" should "generator valid scala serializer upon analyzing java data structure" in {
     val x = new TestClass(1, 2)
     val path = "src/main/java/autojson/core/TestClass.java"
-    val serializerPath = "src/main/scala/autojson/core"
+    val serializerPath = "src/main/scala/autojson/core/serializers"
     // path to a file containing names of all existing serializers
-    val (codeString, methodName)= JsonCodeGenerator.generateSerializationCode(x, path)
-    JsonCodeGenerator.saveSerializerCode(serializerPath, codeString, methodName, "autojson.core")
+    val (codeString, methodName)= JsonCodeGenerator.generateSerializationCode(x, path, serializerPath)
+    JsonCodeGenerator.saveSerializerCode(serializerPath, codeString, methodName, "autojson.core.serializers")
 
     val gtString =
     """import org.json4s.DefaultFormats
       |import org.json4s.native.Json
       |import scala.jdk.CollectionConverters._
+      |import autojson.core.TestClass
       |
       |object TestClassSerializer{
-      |  def toJson(obj: Any): String = {
+      |  def toMap(obj: Any): Map[String, Any] = {
       |    val castedObj = obj.asInstanceOf[TestClass]
-      |    val map = Map("a"->castedObj.a,"b"->castedObj.b,"c"->
+      |    Map("a"->castedObj.a,"b"->castedObj.b,"c"->
       |      castedObj.c.asScala.toList.map{ case (key, value) =>
       |        Map("key" -> key, "value" -> value)
-      |      })
+      |      },"d"->
+      |      castedObj.d.asScala.toList.map{ data =>
+      |        data
+      |      },"e"->TestClass2Serializer.toMap(castedObj.e)
+      |    )
+      |  }
+      |  def toJson(obj : Any): String = {
+      |    val map = toMap(obj)
       |    Json(DefaultFormats).write(map)
       |  }
       |}""".stripMargin

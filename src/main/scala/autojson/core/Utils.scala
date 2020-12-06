@@ -1,5 +1,7 @@
 package autojson.core
 
+import java.io.File
+
 import spoon.Launcher
 import spoon.reflect.CtModel
 import spoon.reflect.declaration.CtElement
@@ -18,6 +20,7 @@ object Utils {
   }
 
   def isJavaFile(path: String): Boolean = path.split("\\.").last == "java"
+  def isScalaFile(path: String): Boolean = path.split("\\.").last == "scala"
 
   def getAST(inputPath: String): Option[CtModel] = {
     if(isJavaFile(inputPath)) {
@@ -29,6 +32,17 @@ object Utils {
       val model: CtModel = launcher.getModel
       Some(model)
     } else None
+  }
+
+  def listJavaFiles(path: String): Seq[File] = {
+    val file = new File(path)
+    if (file.isDirectory) {
+      file.listFiles.toList.flatMap(child => listJavaFiles(child.getAbsolutePath))
+    }
+    else if(file.exists && isJavaFile(file.getName)) {
+      List[File](file)
+    }
+    else List.empty[File]
   }
 
   def filter[T <: CtElement](c: Class[T]): TypeFilter[T] = new TypeFilter[T](c)

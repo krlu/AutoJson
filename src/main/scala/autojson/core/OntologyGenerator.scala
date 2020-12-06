@@ -1,7 +1,5 @@
 package autojson.core
 
-import java.io.File
-
 import autojson.core.Utils._
 import spoon.reflect.declaration.CtType
 
@@ -27,16 +25,5 @@ object OntologyGenerator {
         (inheritor.getSimpleName, classModel.getSimpleName)
       }
     }.toSet
-  }
-
-  private def listJavaFiles(path: String): Seq[File] = {
-    val file = new File(path)
-    if (file.isDirectory) {
-      file.listFiles.toList.flatMap(child => listJavaFiles(child.getAbsolutePath))
-    }
-    else if(file.exists && isJavaFile(file.getName)) {
-      List[File](file)
-    }
-    else List.empty[File]
   }
 }
