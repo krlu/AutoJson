@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers
 
 class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
   "JsonCodeGenerator" should "generator valid scala serializer upon analyzing java data structure" in {
-    val x = new TestClass(1, 2)
+    val x: TestInterface = new TestClass(1, 2)
     val path = "src/main/java/autojson/core/TestClass.java"
     val serializerPath = "src/main/scala/autojson/core/serializers"
     // path to a file containing names of all existing serializers
@@ -42,8 +42,8 @@ class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
     for(name <- List("TestClass", "TestClass2")){
       val file = new File(serializerPath + s"/${name}Serializer.scala")
       assert(file.exists())
-      file.delete()
-      assert(!file.exists())
+//      file.delete()
+//      assert(!file.exists())
     }
   }
 }
