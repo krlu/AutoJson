@@ -1,13 +1,16 @@
 package autojson.core
 
+import autojson.core.example1.TestClass
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class OntologyGeneratorTest extends AnyFlatSpec with Matchers{
   "Ontology Generator" should "create ontology from java files" in {
-    val x = new TestClass(1, 2)
-    val path = "src/main/java/autojson/core/TestClass.java"
-    val ontology = OntologyGenerator.buildOntology(path)
-    ontology shouldEqual Set(("TestInterface","TestClass"), ("TestSuperClass", "TestClass"))
+    val path1 = "src/main/java/autojson/core/example1/"
+    val path2 = "src/main/java/autojson/core/example2/"
+    val onto1 = OntologyGenerator.buildOntology(path1)
+    val onto2 = OntologyGenerator.buildOntology(path2)
+    onto1 shouldEqual Set(("TestInterface","TestClass"), ("TestSuperClass", "TestClass"))
+    onto2 shouldEqual Set(("Worker","BrickLayer"), ("Worker","Engineer"), ("Worker","Inspector"))
   }
 }

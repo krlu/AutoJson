@@ -1,4 +1,4 @@
-package autojson.core;
+package autojson.core.example1;
 
 import java.util.ArrayList;
 import java.util.HashMap;

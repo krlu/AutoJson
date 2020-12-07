@@ -35,9 +35,6 @@ object JsonCodeGenerator {
    *Output: JsonString
    */
 
-  def main(args: Array[String]): Unit = {
-  }
-
   def saveSerializerCode(serializersPath: String, codeString: String, typeName: String, packageStr: String): Unit = {
     val fw = new FileWriter(serializersPath + s"/${typeName}Serializer.scala", true)
     fw.append(s"package $packageStr\n")
@@ -59,12 +56,13 @@ object JsonCodeGenerator {
     val existingSerializers = getExistingSerializerNames(serializersPath)
     // if is abstract class or interface
     if(isAbstractClass(objTypeName, model) || isInterface(objTypeName, model)){
-      // TODO: filter by class, abstract class, and/or interface
-      val implementingTypes = OntologyGenerator.buildOntology(path).filter(_._1 == objTypeName).map(_._2)
+      val file = new File(path)
+      val implementingTypes = OntologyGenerator.buildOntology(file.getParent).filter(_._1 == objTypeName).map(_._2)
       if(implementingTypes.isEmpty) {
-        println(objTypeName + "has no implementing types!")
+        println(s"$objTypeName has no implementing types!")
         return ("", objTypeName)
       }
+      // TODO: each implement class needs to contain fields from parent interface/abstract-class
       // generate serializer for each
       implementingTypes.foreach{ implType =>
         if(!serializerExists(implType, existingSerializers))
@@ -72,11 +70,12 @@ object JsonCodeGenerator {
       }
       val caseStatementsString = implementingTypes.map{ impltype =>
         val varName = impltype.toLowerCase
-        s"  case $varName: $impltype => ${impltype}Serializer.toMap($varName)\n"
+        s"      case $varName: $impltype => ${impltype}Serializer.toMap($varName)\n"
       }.mkString("").dropRight(1)
-      s"""import org.json4s.DefaultFormats
+      val codeString =
+        s"""import org.json4s.DefaultFormats
          |import org.json4s.native.Json
-         |import scala.jdk.CollectionConverters._
+         |import ${javaPathToPackage(file.getParent)}.{${implementingTypes.mkString(",")}}
          |import ${model.getAllPackages.asScala.last}.$objTypeName
          |
          |object ${objTypeName}Serializer{
@@ -90,9 +89,9 @@ object JsonCodeGenerator {
          |    Json(DefaultFormats).write(map)
          |  }
          |}""".stripMargin
-      return ("", objTypeName)
+      return (codeString, objTypeName)
     }
-    val innerMap = fieldNames.map { case (fieldName, fieldType) =>
+    val innerMapData = fieldNames.map { case (fieldName, fieldType) =>
       val fieldTypeName = fieldType.getSimpleName
       val isArray = fieldTypeName.contains("[]")
       val superInterfaces = fieldType.getSuperInterfaces.asScala.toList
@@ -151,13 +150,14 @@ object JsonCodeGenerator {
         else
           s"castedObj.$fieldName"
       s"""\"$fieldName\"->$fieldValue"""
-    }.mkString(",")
+    }
+    val innerMapStr = if(innerMapData.nonEmpty) innerMapData.mkString(",") + "," else ""
     val formattedMap =
-      if(innerMap.length > 80) {
-        s"""Map($innerMap, "className" -> "$objTypeName"
+      if(innerMapStr.length > 80) {
+        s"""Map($innerMapStr"className" -> "$objTypeName"
            |    )""".stripMargin
       } else
-        s"""Map($innerMap, "className" -> "$objTypeName")""".stripMargin
+        s"""Map($innerMapStr"className" -> "$objTypeName")""".stripMargin
     val serializerCode: String =
       s"""import org.json4s.DefaultFormats
          |import org.json4s.native.Json
@@ -183,15 +183,23 @@ object JsonCodeGenerator {
   private def isAbstractClass(objTypeName: String, model: CtModel): Boolean =
     model.getElements(filter(classOf[CtClass[Any]])).asScala.exists{e => e.getSimpleName == objTypeName && e.isAbstract}
 
-  def generateSerializer(fieldTypeName: String, serializersPath: String): Unit = {
+  private def scalaPathToPackage(scalaPath: String): String = pathToPackage(scalaPath, "scala")
+  private def javaPathToPackage(javaPath: String): String = pathToPackage(javaPath, "java")
+  private def pathToPackage(path: String, pathType: String): String = {
+    val normalizedPath = path.replace("\\", "/")
+    if(normalizedPath.contains(s"src/main/${pathType}"))
+      normalizedPath.split(s"src/main/$pathType").toList.last.split("/").toList.mkString(".").drop(1)
+    else throw new IllegalArgumentException(s"serializers path $path did not contain src/main/$pathType")
+  }
+
+  def generateSerializer(fieldTypeName: String, serializersPath: String, javaPath: String = "src/main/java"): Unit = {
     // assuming that the root of all java programs is src/main/java
-    listJavaFiles("src/main/java").find{ file =>
+    listJavaFiles(javaPath).find{ file =>
       file.getName == s"$fieldTypeName.java"
     } match {
-      case Some(file) => println(file.getAbsolutePath)
+      case Some(file) =>
         val (code, _) = generateSerializationCodeWithObjName(fieldTypeName, file.getAbsolutePath, serializersPath)
-        // TODO: perhaps convert serializers path into package path to avoid hard coding?
-        saveSerializerCode(serializersPath, code, fieldTypeName, "autojson.core.serializers")
+        saveSerializerCode(serializersPath, code, fieldTypeName, scalaPathToPackage(serializersPath))
       case None =>
         throw new IllegalStateException(s"Source code file for $fieldTypeName not found in $serializersPath")
     }

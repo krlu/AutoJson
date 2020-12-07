@@ -1,4 +1,4 @@
-package autojson.core;
+package autojson.core.example1;
 
 public interface TestInterface {
 }
