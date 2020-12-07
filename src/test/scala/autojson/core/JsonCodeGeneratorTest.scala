@@ -42,8 +42,8 @@ class JsonCodeGeneratorTest extends AnyFlatSpec with Matchers{
     for(name <- List("TestClass", "TestClass2")){
       val file = new File(serializerPath + s"/${name}Serializer.scala")
       assert(file.exists())
-//      file.delete()
-//      assert(!file.exists())
+      file.delete()
+      assert(!file.exists())
     }
   }
 }
