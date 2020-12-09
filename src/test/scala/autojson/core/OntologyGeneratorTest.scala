@@ -1,6 +1,5 @@
 package autojson.core
 
-import autojson.core.example1.TestClass
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
