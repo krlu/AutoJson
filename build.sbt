@@ -14,6 +14,6 @@ lazy val root = project
       "org.json4s" %% "json4s-native" % "3.7.0-M7",
       "org.json4s" %% "json4s-jackson" % "3.7.0-M7",
       "org.slf4j" % "slf4j-simple" % "1.7.30" % Test,
-      "com.google.code.gson" % "gson" % "2.8.6",
+      "org.reflections" % "reflections" % "0.9.12",
     )
   )

@@ -1,31 +1,45 @@
 package autojson.core
 
 import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Modifier
 import java.util
 
 import autojson.core.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.native.Json
+import org.reflections.Reflections
 
 import scala.jdk.CollectionConverters._
 
 object AutoSerializer {
 
-  def mapToObject[T](map: Map[String, Any], classOf: Class[T]): T = {
+  def mapToObject[T](map: Map[String, Any], classOf: Class[T], packageName: String = "autojson.core"): T = {
+    val reflections = new Reflections(packageName)
     val fields = classOf.getFields.toList
     val params = fields.map(field => field.getType)
+    val isAbstract = Modifier.isAbstract(classOf.asInstanceOf[Class[_]].getModifiers)
+    val isInterface = classOf.isInstance()
+    if(isAbstract || isInterface){
+      val subTypes = reflections.getSubTypesOf(classOf)
+      val subType = subTypes.asScala.toList.find{ st =>
+         st.getSimpleName == map("className").toString
+      }.orNull
+      return mapToObject(map, subType, packageName)
+    }
     val arguments = fields.map{field =>
       val value = map(field.getName)
       val fieldType = field.getType
       if(isPrimitive(fieldType.getSimpleName)) value
       else if(fieldType.getInterfaces.map(_.getSimpleName).contains("Collection")) {
         val typeParam = field.getGenericType.asInstanceOf[ParameterizedType].getActualTypeArguments.head
+        val typeParamClass = typeParam.asInstanceOf[Class[_]]
+
         val typeParamName = typeParam.getTypeName.split("\\.").last
         val collection = value.asInstanceOf[List[Any]].map { element =>
           if(isPrimitive(typeParamName)){
             element
           } else {
-            mapToObject(element.asInstanceOf[Map[String, Any]], typeParam.asInstanceOf[Class[_]])
+            mapToObject(element.asInstanceOf[Map[String, Any]], typeParamClass)
           }
         }
         if(fieldType.getSimpleName.contains("Set"))
@@ -33,6 +47,9 @@ object AutoSerializer {
         else if(fieldType.getSimpleName.contains("List"))
           collection.asJava
         else collection
+      }
+      else{
+        throw new IllegalStateException(s"Unable to parse field ${field.getName} of type ${fieldType.getSimpleName}!")
       }
     }
     classOf.getDeclaredConstructor(params: _*).newInstance(arguments: _*)

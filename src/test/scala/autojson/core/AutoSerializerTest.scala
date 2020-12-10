@@ -27,13 +27,15 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val gtString = "{\"workers\":[{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"BrickLayer\"},{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"Inspector\"},{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"Engineer\"}],\"buildings\":[{\"id\":\"b1\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"},{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}],\"className\":\"ConstructionSite\"}"
     csJsonString shouldEqual gtString
     val map = AutoSerializer.toMap(cs)
-    val x = AutoSerializer.mapToObject(map, classOf[ConstructionSite])
-    x.workers.asScala.toList.foreach( w => assert(w.getClass.getSimpleName == "Worker"))
+    val csFromJson = AutoSerializer.mapToObject(map, classOf[ConstructionSite])
+    csFromJson.workers.asScala.toList.foreach{ w =>
+      assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
+    }
     cs.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
-    x.buildings.asScala.map(_.id) shouldEqual cs.buildings.asScala.map(_.id)
-    x.workers.asScala.map(w => (w.age, w.id, w.name)) shouldEqual cs.workers.asScala.map(w => (w.age, w.id, w.name))
+    csFromJson.buildings.asScala.map(_.id) shouldEqual cs.buildings.asScala.map(_.id)
+    csFromJson.workers.asScala.map(w => (w.age, w.id, w.name, w.getClass.getSimpleName)) shouldEqual cs.workers.asScala.map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
   }
 
   "AutoSerializer" should "Serialize a test class object" in {
