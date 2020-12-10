@@ -4,29 +4,12 @@ import java.lang.reflect.ParameterizedType
 import java.util
 
 import autojson.core.Utils._
-import autojson.core.example2.{BrickLayer, Building, ConstructionSite, Engineer, Inspector, Room}
 import org.json4s.DefaultFormats
 import org.json4s.native.Json
 
 import scala.jdk.CollectionConverters._
 
 object AutoSerializer {
-  def main(args: Array[String]): Unit = {
-    val bl = new BrickLayer("Brandie", "asdf", 100)
-    val in = new Inspector("Ivan", "qwer", 100)
-    val en = new Engineer("Eugenia", "uiop", 100)
-    val b1r1 = new Room()
-    val b1r2 = new Room()
-    val build1 = new Building("b1", Set(b1r1, b1r2).asJava)
-    val b2r1 = new Room()
-    val b2r2 = new Room()
-    val build2 = new Building("b2", Set(b2r1, b2r2).asJava)
-    val buildings = Set(build1, build2).asJava
-    val workers = Set(bl, in, en).asJava
-    val cs = new ConstructionSite(workers, buildings)
-    val map = toMap(cs)
-    val x = mapToObject(map, classOf[ConstructionSite])
-  }
 
   def mapToObject[T](map: Map[String, Any], classOf: Class[T]): T = {
     val fields = classOf.getFields.toList

@@ -1,6 +1,6 @@
 package autojson.core.example2;
 
-public abstract class Worker {
+public class Worker {
     public String name;
     public String id;
     public int age;
