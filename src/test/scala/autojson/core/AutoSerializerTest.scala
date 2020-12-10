@@ -2,8 +2,6 @@ package autojson.core
 
 import autojson.core.example1.{TestClass, TestInterface}
 import autojson.core.example2._
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -15,11 +13,11 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val bl = new BrickLayer("Brandie", "asdf", 100)
     val in = new Inspector("Ivan", "qwer", 100)
     val en = new Engineer("Eugenia", "uiop", 100)
-    val b1r1 = new Room();
-    val b1r2 = new Room();
+    val b1r1 = new Room()
+    val b1r2 = new Room()
     val build1 = new Building("b1", Set(b1r1, b1r2).asJava)
-    val b2r1 = new Room();
-    val b2r2 = new Room();
+    val b2r1 = new Room()
+    val b2r2 = new Room()
     val build2 = new Building("b2", Set(b2r1, b2r2).asJava)
     val buildings = Set(build1, build2).asJava
     val workers = Set(bl, in, en).asJava
