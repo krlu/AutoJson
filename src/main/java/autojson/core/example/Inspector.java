@@ -1,4 +1,4 @@
-package autojson.core.example2;
+package autojson.core.example;
 
 public class Inspector extends Worker {
     public Inspector(String name, String id, int age) {

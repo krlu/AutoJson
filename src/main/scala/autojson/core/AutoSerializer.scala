@@ -1,29 +1,22 @@
 package autojson.core
 
-import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Modifier
+import java.lang.reflect.{Modifier, ParameterizedType}
 import java.util
 
 import autojson.core.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.native.Json
-import org.reflections.Reflections
 
 import scala.jdk.CollectionConverters._
 
 object AutoSerializer {
-
-  def mapToObject[T](map: Map[String, Any], classOf: Class[T], packageName: String = "autojson.core"): T = {
-    val reflections = new Reflections(packageName)
+  def mapToObject[T](map: Map[String, Any], classOf: Class[T], packageName: String): T = {
     val fields = classOf.getFields.toList
     val params = fields.map(field => field.getType)
     val isAbstract = Modifier.isAbstract(classOf.asInstanceOf[Class[_]].getModifiers)
-    val isInterface = classOf.isInstance()
+    val isInterface = classOf.isInterface
     if(isAbstract || isInterface){
-      val subTypes = reflections.getSubTypesOf(classOf)
-      val subType = subTypes.asScala.toList.find{ st =>
-         st.getSimpleName == map("className").toString
-      }.orNull
+      val subType = Class.forName(s"${packageName}.${map("className").toString}").asInstanceOf[Class[_ <: T]]
       return mapToObject(map, subType, packageName)
     }
     val arguments = fields.map{field =>
@@ -39,7 +32,7 @@ object AutoSerializer {
           if(isPrimitive(typeParamName)){
             element
           } else {
-            mapToObject(element.asInstanceOf[Map[String, Any]], typeParamClass)
+            mapToObject(element.asInstanceOf[Map[String, Any]], typeParamClass, packageName)
           }
         }
         if(fieldType.getSimpleName.contains("Set"))

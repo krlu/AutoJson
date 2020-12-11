@@ -1,8 +1,8 @@
 package autojson.core
 
-import autojson.core.AutoSerializer
-import autojson.core.example1.{TestClass, TestInterface}
-import autojson.core.example2._
+import java.util
+
+import autojson.core.example._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -11,9 +11,9 @@ import scala.jdk.CollectionConverters._
 
 class AutoSerializerTest extends AnyFlatSpec with Matchers{
   "AutoSerializer" should "serialize and deserialize a construction site object" in {
-    val bl = new BrickLayer("Brandie", "asdf", 100)
-    val in = new Inspector("Ivan", "qwer", 100)
-    val en = new Engineer("Eugenia", "uiop", 100)
+    val bl: Person = new BrickLayer("Brandie", "asdf", 100)
+    val in: Person = new Inspector("Ivan", "qwer", 100)
+    val en: Person = new Engineer("Eugenia", "uiop", 100)
     val b1r1 = new Room()
     val b1r2 = new Room()
     val build1 = new Building("b1", Set(b1r1, b1r2).asJava)
@@ -27,7 +27,7 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val gtString = "{\"workers\":[{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"BrickLayer\"},{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"Inspector\"},{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"Engineer\"}],\"buildings\":[{\"id\":\"b1\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"},{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}],\"className\":\"ConstructionSite\"}"
     csJsonString shouldEqual gtString
     val map = AutoSerializer.toMap(cs)
-    val csFromJson = AutoSerializer.mapToObject(map, classOf[ConstructionSite])
+    val csFromJson = AutoSerializer.mapToObject(map, classOf[ConstructionSite], packageName = "autojson.core.example")
     csFromJson.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
@@ -35,14 +35,6 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
     csFromJson.buildings.asScala.map(_.id) shouldEqual cs.buildings.asScala.map(_.id)
-    csFromJson.workers.asScala.map(w => (w.age, w.id, w.name, w.getClass.getSimpleName)) shouldEqual cs.workers.asScala.map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
+    csFromJson.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName)) shouldEqual cs.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
   }
-
-  "AutoSerializer" should "Serialize a test class object" in {
-    val testInt: TestInterface = new TestClass(1, 2)
-    val jsonString = AutoSerializer.toJson(testInt)
-    val gtString = "{\"e\":{\"a\":0,\"b\":\"b\",\"className\":\"TestClass2\"},\"a\":1,\"b\":2,\"className\":\"TestClass\",\"c\":[{\"key\":1,\"value\":\"1\"},{\"key\":2,\"value\":\"2\"}],\"d\":[]}"
-    jsonString shouldEqual gtString
-  }
-
 }

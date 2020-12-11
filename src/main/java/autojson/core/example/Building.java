@@ -1,4 +1,4 @@
-package autojson.core.example2;
+package autojson.core.example;
 
 import java.util.Set;
 

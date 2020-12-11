@@ -1,12 +1,12 @@
-package autojson.core.example2;
+package autojson.core.example;
 
 
 import java.util.Set;
 
 public class ConstructionSite {
-    public Set<Worker> workers;
+    public Set<Person> workers;
     public Set<Building> buildings;
-    public ConstructionSite(Set<Worker> workers, Set<Building> buildings){
+    public ConstructionSite(Set<Person> workers, Set<Building> buildings){
         this.workers = workers;
         this.buildings = buildings;
     }
