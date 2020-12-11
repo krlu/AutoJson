@@ -1,7 +1,5 @@
 package autojson.core
 
-import java.util
-
 import autojson.core.example._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -26,8 +24,9 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val csJsonString = AutoSerializer.toJson(cs)
     val gtString = "{\"workers\":[{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"BrickLayer\"},{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"Inspector\"},{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"Engineer\"}],\"buildings\":[{\"id\":\"b1\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"},{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}],\"className\":\"ConstructionSite\"}"
     csJsonString shouldEqual gtString
-    val map = AutoSerializer.toMap(cs)
-    val csFromJson = AutoSerializer.mapToObject(map, classOf[ConstructionSite], packageName = "autojson.core.example")
+    // Map(name -> Brandie, id -> asdf, age -> 100, className -> BrickLayer)
+    // Map(name -> Brandie, id -> asdf, age -> 100, className -> BrickLayer)
+    val csFromJson = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "autojson.core.example")
     csFromJson.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }

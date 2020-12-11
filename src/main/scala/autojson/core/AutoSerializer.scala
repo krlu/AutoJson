@@ -6,17 +6,43 @@ import java.util
 import autojson.core.Utils._
 import org.json4s.DefaultFormats
 import org.json4s.native.Json
-
+import org.json4s.jackson.JsonMethods._
 import scala.jdk.CollectionConverters._
 
 object AutoSerializer {
+
+  def jsonToObject[T](jsonString: String, classOf: Class[T], packageName: String): T = {
+    implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
+    val map = parse(jsonString).extract[Map[String, Any]]
+    mapToObject(convert(map), classOf, packageName)
+  }
+
+  private def convert(map: Map[String, Any]): Map[String, Any] = {
+    map.map{ case (k,v) =>
+      val value = if(recognize[BigInt](v)){
+        v.asInstanceOf[BigInt].toInt
+      }
+      else if(recognize[Seq[_]](v)){
+        v.asInstanceOf[Seq[_]].map{
+          case bi: BigInt => bi.toInt
+          case map: Map[String,Any] => convert(map)
+        }
+      }
+      else if(recognize[Map[String, Any]](v)){
+        convert(v.asInstanceOf[Map[String, Any]])
+      }
+      else v
+      k -> value
+    }
+  }
+
   def mapToObject[T](map: Map[String, Any], classOf: Class[T], packageName: String): T = {
     val fields = classOf.getFields.toList
     val params = fields.map(field => field.getType)
     val isAbstract = Modifier.isAbstract(classOf.asInstanceOf[Class[_]].getModifiers)
     val isInterface = classOf.isInterface
     if(isAbstract || isInterface){
-      val subType = Class.forName(s"${packageName}.${map("className").toString}").asInstanceOf[Class[_ <: T]]
+      val subType = Class.forName(s"$packageName.${map("className").toString}").asInstanceOf[Class[_ <: T]]
       return mapToObject(map, subType, packageName)
     }
     val arguments = fields.map{field =>
@@ -49,7 +75,7 @@ object AutoSerializer {
   }
 
   def isPrimitive(inputString: String): Boolean =
-    List("int", "double", "integer", "float", "string", "long").contains(inputString.toLowerCase())
+    List("int", "double", "integer", "float", "string", "long", "bigint").contains(inputString.toLowerCase())
 
   def toJson(inputObject: Object): String = {
     val map = toMap(inputObject)
