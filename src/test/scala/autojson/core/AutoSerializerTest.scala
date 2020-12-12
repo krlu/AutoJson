@@ -22,10 +22,16 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val workers = Set(bl, in, en).asJava
     val cs = new ConstructionSite(workers, buildings)
     val csJsonString = AutoSerializer.toJson(cs)
-    val gtString = "{\"workers\":[{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"BrickLayer\"},{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"Inspector\"},{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"Engineer\"}],\"buildings\":[{\"id\":\"b1\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"},{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}],\"className\":\"ConstructionSite\"}"
+    val gtString =
+      "{\"workers\":[" +
+        "{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"BrickLayer\"}," +
+        "{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"Inspector\"}," +
+        "{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"Engineer\"}]," +
+      "\"buildings\":[" +
+        "{\"id\":\"b1\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}," +
+        "{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}]," +
+      "\"className\":\"ConstructionSite\"}"
     csJsonString shouldEqual gtString
-    // Map(name -> Brandie, id -> asdf, age -> 100, className -> BrickLayer)
-    // Map(name -> Brandie, id -> asdf, age -> 100, className -> BrickLayer)
     val csFromJson = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "autojson.core.example")
     csFromJson.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
@@ -34,6 +40,8 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
     csFromJson.buildings.asScala.map(_.id) shouldEqual cs.buildings.asScala.map(_.id)
-    csFromJson.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName)) shouldEqual cs.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
+    val result1 =  csFromJson.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
+    val result2 = cs.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
+    result1 shouldEqual result2
   }
 }

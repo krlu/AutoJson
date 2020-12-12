@@ -23,9 +23,12 @@ object AutoSerializer {
         v.asInstanceOf[BigInt].toInt
       }
       else if(recognize[Seq[_]](v)){
-        v.asInstanceOf[Seq[_]].map{
-          case bi: BigInt => bi.toInt
-          case map: Map[String,Any] => convert(map)
+        v.asInstanceOf[Seq[_]].map{ element =>
+          if(recognize[BigInt](element))
+            element.asInstanceOf[BigInt].toInt
+          else if(recognize[Map[String, Any]](element))
+            convert(element.asInstanceOf[Map[String, Any]])
+          else element
         }
       }
       else if(recognize[Map[String, Any]](v)){
@@ -110,6 +113,8 @@ object AutoSerializer {
       case _: java.lang.Integer => true
       case _: java.lang.String => true
       case _: java.lang.Double => true
+      case _: java.lang.Float => true
+      case _: java.lang.Boolean => true
       case _ => false
     }
   }
