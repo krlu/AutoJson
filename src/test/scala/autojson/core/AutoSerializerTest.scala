@@ -1,6 +1,7 @@
 package autojson.core
 
-import autojson.core.example._
+import example1._
+import example2.{Captain, Pilot, Scientist, Spaceship}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -8,7 +9,7 @@ import scala.jdk.CollectionConverters._
 
 
 class AutoSerializerTest extends AnyFlatSpec with Matchers{
-  "AutoSerializer" should "serialize and deserialize a construction site object" in {
+  "AutoSerializer" should "serialize and deserialize a java object" in {
     val bl: Person = new BrickLayer("Brandie", "asdf", 100)
     val in: Person = new Inspector("Ivan", "qwer", 100)
     val en: Person = new Engineer("Eugenia", "uiop", 100)
@@ -32,7 +33,7 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
         "{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}]," +
       "\"className\":\"ConstructionSite\"}"
     csJsonString shouldEqual gtString
-    val csFromJson = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "autojson.core.example")
+    val csFromJson = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "example1")
     csFromJson.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
@@ -43,5 +44,13 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val result1 =  csFromJson.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
     val result2 = cs.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
     result1 shouldEqual result2
+  }
+  
+  "AutoSerializer" should "serialize and deserialize a scala object" in {
+    val crewMembers = Set(new Captain("luffy", 100), new Scientist("nami", 200), new Pilot("Usop", 300))
+    val sp = new Spaceship(3.14, crewMembers)
+    val spJsonString = AutoSerializer.toJson(sp)
+    val gtString = "{\"weight\":3.14,\"crewMembers\":[{\"name\":\"luffy\",\"age\":100,\"className\":\"Captain\"},{\"name\":\"nami\",\"age\":200,\"className\":\"Scientist\"},{\"name\":\"Usop\",\"age\":300,\"className\":\"Pilot\"}],\"className\":\"Spaceship\"}"
+    spJsonString shouldEqual gtString
   }
 }

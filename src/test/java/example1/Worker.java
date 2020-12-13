@@ -1,4 +1,4 @@
-package autojson.core.example;
+package example1;
 
 public abstract class Worker implements Person{
     public String name;

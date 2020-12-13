@@ -5,8 +5,9 @@ import java.util
 
 import autojson.core.Utils._
 import org.json4s.DefaultFormats
-import org.json4s.native.Json
 import org.json4s.jackson.JsonMethods._
+import org.json4s.native.Json
+
 import scala.jdk.CollectionConverters._
 
 object AutoSerializer {
@@ -80,32 +81,47 @@ object AutoSerializer {
   def isPrimitive(inputString: String): Boolean =
     List("int", "double", "integer", "float", "string", "long", "bigint").contains(inputString.toLowerCase())
 
-  def toJson(inputObject: Object): String = {
+  def toJson(inputObject: Object, prettyPrint: Boolean = false): String = {
     val map = toMap(inputObject)
-    Json(DefaultFormats).write(map)
+    if(prettyPrint)
+      Json(DefaultFormats).writePretty(map)
+    else
+      Json(DefaultFormats).write(map)
   }
+
   def toMap(inputObject: Object): Map[String, Object] = {
     val cls = inputObject.getClass
-    val fieldsMap = cls.getFields.toList.map{ field =>
+    val fieldsMap: Map[String, Object] = cls.getFields.toList.map{ field =>
       val fieldValue: Object = field.get(inputObject)
-      val value =
-        if(isPrimitive(fieldValue)) fieldValue
-        else if(recognize[util.Collection[Object]](fieldValue)){
-          val collection = fieldValue.asInstanceOf[util.Collection[Object]]
-          collection.asScala.toList.map(element => toMap(element))
-        }
-        else if(recognize[util.Map[Object, Object]](fieldValue)){
-          val map = fieldValue.asInstanceOf[util.Map[Object, Object]]
-          map.asScala.toList.map{ case (key, value) =>
-            val keyValue = if(isPrimitive(key)) key else toMap(key)
-            val valValue = if(isPrimitive(value)) value else toMap(value)
-            Map("key" -> keyValue, "value" -> valValue)
-          }
-        }
-        else toMap(fieldValue)
-      (field.getName, value)
+      parseMember(field.getName, fieldValue)
     }.toMap
-    fieldsMap ++ Map("className" -> cls.getSimpleName)
+    val methodsMap: Map[String, Object] = cls.getDeclaredMethods.toList
+      .filter(method => Modifier.isPublic(method.getModifiers) && method.getParameterCount == 0)
+      .map(method => parseMember(method.getName, method.invoke(inputObject, List(): _*))).toMap
+    fieldsMap ++ methodsMap ++ Map("className" -> cls.getSimpleName)
+  }
+
+  private def parseMember(memberName: String, memberValue: Object): (String, Object) = {
+    val value =
+      if(isPrimitive(memberValue)) memberValue
+      else if(recognize[Iterable[Object]](memberValue)){
+        val collection = memberValue.asInstanceOf[Iterable[Object]]
+        collection.toList.map(element => toMap(element))
+      }
+      else if(recognize[util.Collection[Object]](memberValue)){
+        val collection = memberValue.asInstanceOf[util.Collection[Object]]
+        collection.asScala.toList.map(element => toMap(element))
+      }
+      else if(recognize[util.Map[Object, Object]](memberValue)){
+        val map = memberValue.asInstanceOf[util.Map[Object, Object]]
+        map.asScala.toList.map{ case (key, value) =>
+          val keyValue = if(isPrimitive(key)) key else toMap(key)
+          val valValue = if(isPrimitive(value)) value else toMap(value)
+          Map("key" -> keyValue, "value" -> valValue)
+        }
+      }
+      else toMap(memberValue)
+    (memberName, value)
   }
 
   private def isPrimitive(obj: Object): Boolean ={
