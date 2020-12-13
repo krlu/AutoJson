@@ -1,6 +1,6 @@
 package autojson.core
 
-import java.lang.reflect.{Modifier, ParameterizedType}
+import java.lang.reflect.{Modifier, ParameterizedType, Type}
 import java.util
 
 import autojson.core.Utils._
@@ -42,41 +42,67 @@ object AutoSerializer {
 
   def mapToObject[T](map: Map[String, Any], classOf: Class[T], packageName: String): T = {
     val fields = classOf.getFields.toList
-    val params = fields.map(field => field.getType)
+    val methods = classOf.getDeclaredMethods.toList.filter(method => Modifier.isPublic(method.getModifiers) && method.getParameterCount == 0)
     val isAbstract = Modifier.isAbstract(classOf.asInstanceOf[Class[_]].getModifiers)
     val isInterface = classOf.isInterface
     if(isAbstract || isInterface){
       val subType = Class.forName(s"$packageName.${map("className").toString}").asInstanceOf[Class[_ <: T]]
       return mapToObject(map, subType, packageName)
     }
-    val arguments = fields.map{field =>
-      val value = map(field.getName)
-      val fieldType = field.getType
-      if(isPrimitive(fieldType.getSimpleName)) value
-      else if(fieldType.getInterfaces.map(_.getSimpleName).contains("Collection")) {
-        val typeParam = field.getGenericType.asInstanceOf[ParameterizedType].getActualTypeArguments.head
-        val typeParamClass = typeParam.asInstanceOf[Class[_]]
-
-        val typeParamName = typeParam.getTypeName.split("\\.").last
-        val collection = value.asInstanceOf[List[Any]].map { element =>
-          if(isPrimitive(typeParamName)){
-            element
-          } else {
-            mapToObject(element.asInstanceOf[Map[String, Any]], typeParamClass, packageName)
-          }
-        }
-        if(fieldType.getSimpleName.contains("Set"))
-          collection.toSet.asJava
-        else if(fieldType.getSimpleName.contains("List"))
-          collection.asJava
-        else collection
-      }
-      else{
-        throw new IllegalStateException(s"Unable to parse field ${field.getName} of type ${fieldType.getSimpleName}!")
-      }
+    val methodArgs = methods.map{ method =>
+      val name = method.getName
+      val value = map(method.getName).asInstanceOf[Object]
+      val returnType = method.getReturnType
+      val typeParam = method.getGenericReturnType
+      name -> parseArgs(value, returnType, typeParam, name, packageName)
     }
-    classOf.getDeclaredConstructor(params: _*).newInstance(arguments: _*)
+    val arguments = fields.map{field =>
+      val name = field.getName
+      val value = map(field.getName).asInstanceOf[Object]
+      val fieldType = field.getType
+      name -> parseArgs(value, fieldType, field.getGenericType, name, packageName)
+    } ++ methodArgs
+    val argMap = arguments.toMap
+    val constructor = classOf.getConstructors.toList.head
+    val constructorParams = constructor.getParameters
+    if(constructorParams.forall(cp => argMap.contains(cp.getName))) {
+      val orderedArgs = classOf.getConstructors.toList.head.getParameters.map { param =>
+        argMap(param.getName)
+      }
+      constructor.newInstance(orderedArgs: _*).asInstanceOf[T]
+    }else constructor.newInstance(arguments.map(_._2):_*).asInstanceOf[T]
   }
+
+  def parseArgs(value: Object, valueType: Class[_], genericType: Type, valueName: String, packageName: String): Object = {
+    val interfaces = valueType.getInterfaces.map(_.getSimpleName)
+    if(isPrimitive(valueType.getSimpleName)) value
+    else if(interfaces.contains("Collection") || interfaces.contains("Iterable")) {
+      val typeParam = genericType.asInstanceOf[ParameterizedType].getActualTypeArguments.head
+      val typeParamClass = typeParam.asInstanceOf[Class[_]]
+      val typeParamName = typeParam.getTypeName.split("\\.").last
+      val collection = value.asInstanceOf[List[Any]].map { element =>
+        if(isPrimitive(typeParamName)){
+          element
+        } else {
+          mapToObject(element.asInstanceOf[Map[String, Any]], typeParamClass, packageName)
+        }
+      }
+      if(valueType.getSimpleName.contains("Set")) {
+        if(interfaces.contains("Iterable")) collection.toSet
+        else collection.toSet.asJava
+      } else if(valueType.getSimpleName.contains("List"))
+        if(interfaces.contains("Iterable")) collection.toSet
+        else collection.toSet.asJava
+      else if(valueType.getSimpleName.contains("Map"))
+        throw new IllegalArgumentException(s"AutoJson does not yet support serialization for Map types like: ${valueType.getName}.")
+      else
+        throw new IllegalArgumentException(s"Could not deserialize iterable/collection structure of ${valueType.getName}")
+    }
+    else{
+      throw new IllegalStateException(s"Unable to parse field $valueName of type ${valueType.getSimpleName}!")
+    }
+  }
+
 
   def isPrimitive(inputString: String): Boolean =
     List("int", "double", "integer", "float", "string", "long", "bigint").contains(inputString.toLowerCase())

@@ -119,11 +119,12 @@ csJsonString should have the following format:
 ```
 You can save the above string to a JSON file, then read from said file to recover the string.\
 Finally, you can deserialize back to a `ConstructionSite` with the code below.\
-Note: You must specify the package where the subTypes live. This code still breaks if your subtypes are in different packages
+Note: You must specify the package where the subTypes live. In this case we put all java classes in the `example1` package\
+This code still breaks if your subtypes are in different packages.
 ```
 import autojson.core
 import example1.ConstructionSite
-val csFromJson: ConstructionSite = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "example1")
+val csFromJson: ConstructionSite = AutoSerializer.jsonToObject(csJsonString, classOf[ConstructionSite], packageName = "example1")
 ``` 
 
 ## Scala Example
@@ -170,4 +171,11 @@ spJsonString should have the following format:
   "className":"Spaceship"
 }
 ```
-Note: De-serialization does not exist yet for Scala Classes. This is a work in progress! 
+Deserialization is also similar to the java example\
+Notice that we put all classes related to `SpaceShip` in the `Example2` package
+
+```
+import autojson.core
+import example2.Spaceship
+val spaceShipFromJson: SpaceShip = AutoSerializer.jsonToObject(spaceShipJsonString, classOf[Spaceship], packageName = "example2")
+```

@@ -33,7 +33,7 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
         "{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}]," +
       "\"className\":\"ConstructionSite\"}"
     csJsonString shouldEqual gtString
-    val csFromJson = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "example1")
+    val csFromJson: ConstructionSite = AutoSerializer.jsonToObject(gtString, classOf[ConstructionSite], packageName = "example1")
     csFromJson.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
@@ -48,9 +48,13 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
   
   "AutoSerializer" should "serialize and deserialize a scala object" in {
     val crewMembers = Set(new Captain("luffy", 100), new Scientist("nami", 200), new Pilot("Usop", 300))
-    val sp = new Spaceship(3.14, crewMembers)
-    val spJsonString = AutoSerializer.toJson(sp)
+    val spaceShip = new Spaceship(3.14, crewMembers)
+    val spaceShipJsonString = AutoSerializer.toJson(spaceShip)
     val gtString = "{\"weight\":3.14,\"crewMembers\":[{\"name\":\"luffy\",\"age\":100,\"className\":\"Captain\"},{\"name\":\"nami\",\"age\":200,\"className\":\"Scientist\"},{\"name\":\"Usop\",\"age\":300,\"className\":\"Pilot\"}],\"className\":\"Spaceship\"}"
-    spJsonString shouldEqual gtString
+    spaceShipJsonString shouldEqual gtString
+    val spaceShipFromJson: Spaceship = AutoSerializer.jsonToObject(spaceShipJsonString, classOf[Spaceship], packageName = "example2")
+    spaceShip.weight shouldEqual spaceShipFromJson.weight
+    spaceShip.crewMembers.map(crew => (crew.name, crew.age)) shouldEqual spaceShipFromJson.crewMembers.map(crew => (crew.name, crew.age))
+
   }
 }
