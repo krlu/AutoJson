@@ -10,4 +10,8 @@ public class ConstructionSite {
         this.workers = workers;
         this.buildings = buildings;
     }
+
+    public int getFoo(){
+        return 1;
+    }
 }

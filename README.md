@@ -1,6 +1,14 @@
 # Auto-JSON 
 Analyzes your Java/Scala object at runtime and serializes/deserializes to/from JSON.
-Handles deserialization for Interface Types by preserving implementing classes in the JSON serialization.
+
+Advantages over google GSON and Jackson Object Mapper: 
+- Handles mixtures of Scala and Java objects by differentiating between language annotations
+- Handles deserialization for Interface Types by preserving implementing classes labels in the JSON serialization.
+- Lightweight, only relies on the Json4s dependency
+
+Upcoming features: 
+- Support for `Map` type  objects in both Scala and Java
+- Support for Scala Case classes 
 
 ## Java Example 
 Consider the `ConstructionSite` Java class and its associated objects
@@ -119,12 +127,10 @@ csJsonString should have the following format:
 ```
 You can save the above string to a JSON file, then read from said file to recover the string.\
 Finally, you can deserialize back to a `ConstructionSite` with the code below.\
-Note: You must specify the package where the subTypes live. In this case we put all java classes in the `example1` package\
-This code still breaks if your subtypes are in different packages.
 ```
 import autojson.core
 import example1.ConstructionSite
-val csFromJson: ConstructionSite = AutoSerializer.jsonToObject(csJsonString, classOf[ConstructionSite], packageName = "example1")
+val csFromJson: ConstructionSite = AutoSerializer.jsonToObject(csJsonString, classOf[ConstructionSite])
 ``` 
 
 ## Scala Example
@@ -143,8 +149,8 @@ class Captain(override val name: String, override val age: Int) extends CrewMemb
 We then serialize the scala class `SpaceShip` as follows 
 ```
 val crewMembers = Set(new Captain("luffy", 100), new Scientist("nami", 200), new Pilot("Usop", 300))
-val sp = new Spaceship(3.14, crewMembers)
-val spJsonString = AutoSerializer.toJson(sp, prettyPrint = true)
+val spaceShip = new Spaceship(3.14, crewMembers)
+val spJsonString = AutoSerializer.toJson(spaceShip, prettyPrint = true)
 ```
 
 spJsonString should have the following format:   
@@ -177,5 +183,5 @@ Notice that we put all classes related to `SpaceShip` in the `Example2` package
 ```
 import autojson.core
 import example2.Spaceship
-val spaceShipFromJson: SpaceShip = AutoSerializer.jsonToObject(spaceShipJsonString, classOf[Spaceship], packageName = "example2")
+val spaceShipFromJson: SpaceShip = AutoSerializer.jsonToObject(spaceShipJsonString, classOf[Spaceship])
 ```

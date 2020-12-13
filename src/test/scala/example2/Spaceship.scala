@@ -1,5 +1,7 @@
 package example2
 
+import example1.ConstructionSite
+
 class Spaceship(val weight: Double, val crewMembers: Set[CrewMember])
 
 trait CrewMember{
