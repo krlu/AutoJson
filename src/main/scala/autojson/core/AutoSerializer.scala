@@ -30,16 +30,23 @@ object AutoSerializer {
     }.toMap
     val methodsMap: Map[String, Object] =
       if(!isScala) Map.empty[String, Object]
-      else
+      else {
         cls.getDeclaredMethods.toList
         .filter(method => Modifier.isPublic(method.getModifiers) && method.getParameterCount == 0)
         .map(method => parseMember(method.getName, method.invoke(inputObject, List(): _*))).toMap
+      }
     fieldsMap ++ methodsMap ++ Map("className" -> cls.getSimpleName)
   }
 
   private def parseMember(memberName: String, memberValue: Object): (String, Object) = {
     val value =
-      if(isPrimitive(memberValue)) memberValue
+      if(isPrimitive(memberValue)) {
+        memberValue
+      }
+      else if(memberValue.isInstanceOf[Map[_,_]]){
+        val map = memberValue.asInstanceOf[Map[Object, Object]]
+        createMapOfMap(map)
+      }
       else if(recognize[Iterable[Object]](memberValue)){
         val collection = memberValue.asInstanceOf[Iterable[Object]]
         collection.toList.map(element => toMap(element))
@@ -48,15 +55,14 @@ object AutoSerializer {
         val collection = memberValue.asInstanceOf[util.Collection[Object]]
         collection.asScala.toList.map(element => toMap(element))
       }
-      else if(recognize[Map[Object, Object]](memberValue)){
-        val map = memberValue.asInstanceOf[Map[Object, Object]]
-        createMapOfMap(map)
-      }
       else if(recognize[util.Map[Object, Object]](memberValue)){
         val map = memberValue.asInstanceOf[util.Map[Object, Object]].asScala.toMap
         createMapOfMap(map)
       }
-      else toMap(memberValue)
+      else {
+        println("line 73")
+        toMap(memberValue)
+      }
     (memberName, value)
   }
 

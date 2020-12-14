@@ -46,7 +46,7 @@ object AutoDeserializer {
     val isAbstract = Modifier.isAbstract(classOf.asInstanceOf[Class[_]].getModifiers)
     val isInterface = classOf.isInterface
     if(isAbstract || isInterface){
-      val subType = Class.forName(s"$packageName.${map("className").toString}").asInstanceOf[Class[_ <: T]]
+      val subType = Class.forName(s"$packageName.${map("className").toString}").asInstanceOf[Class[T]]
       return mapToObject(map, subType)
     }
     val methodArgs = methods.filter(m => map.contains(m.getName)).map{ method =>
@@ -54,13 +54,13 @@ object AutoDeserializer {
       val value = map(method.getName).asInstanceOf[Object]
       val returnType = method.getReturnType
       val typeParam = method.getGenericReturnType
-      name -> parseArgs(value, returnType, typeParam, name, packageName)
+      name -> parseArgs(value, returnType, typeParam, name)
     }
     val arguments = fields.map{field =>
       val name = field.getName
       val value = map(field.getName).asInstanceOf[Object]
       val fieldType = field.getType
-      name -> parseArgs(value, fieldType, field.getGenericType, name, packageName)
+      name -> parseArgs(value, fieldType, field.getGenericType, name)
     } ++ methodArgs
     val argMap = arguments.toMap
     val constructor = classOf.getConstructors.toList.head
@@ -73,7 +73,7 @@ object AutoDeserializer {
     }else constructor.newInstance(arguments.map(_._2):_*).asInstanceOf[T]
   }
 
-  private def parseArgs(value: Object, valueType: Class[_], genericType: Type, valueName: String, packageName: String): Object = {
+  private def parseArgs(value: Object, valueType: Class[_], genericType: Type, valueName: String): Object = {
     val interfaces = valueType.getInterfaces.map(_.getSimpleName)
     if(isPrimitive(valueType.getSimpleName)) value
     else if(interfaces.contains("Collection") || interfaces.contains("Iterable")) {
@@ -91,11 +91,32 @@ object AutoDeserializer {
         if(interfaces.contains("Iterable")) collection.toSet
         else collection.toSet.asJava
       } else if(valueType.getSimpleName.contains("List"))
-        if(interfaces.contains("Iterable")) collection.toSet
-        else collection.toSet.asJava
-      else if(valueType.getSimpleName.contains("Map"))
-        throw new IllegalArgumentException(s"AutoJson does not yet support serialization for Map types like: ${valueType.getName}.")
-      else
+        if(interfaces.contains("Iterable")) collection
+        else collection.asJava
+      else if(valueType.getSimpleName.contains("Map")) {
+        value.asInstanceOf[List[_]].map{ element =>
+          val mapOfMap = element.asInstanceOf[Map[Object, Object]]
+          val mKey = mapOfMap("key")
+          val mValue = mapOfMap("value")
+          val mk =
+            if(isPrimitive(mKey)) mKey
+            else {
+              val map = mKey.asInstanceOf[Map[String,Any]]
+              val packageName = valueType.getPackage.toString.split(" ").last
+              val subType = Class.forName(s"$packageName.${map("className").toString}")
+              mapToObject(mKey.asInstanceOf[Map[String,Any]], subType)
+            }
+          val mv =
+            if(isPrimitive(mKey)) mValue
+            else {
+              val map = mValue.asInstanceOf[Map[String,Any]]
+              val packageName = valueType.getPackage.toString.split(" ").last
+              val subType = Class.forName(s"$packageName.${map("className").toString}")
+              mapToObject(mValue.asInstanceOf[Map[String,Any]], subType)
+            }
+          mk -> mv
+        }.toMap
+      } else
         throw new IllegalArgumentException(s"Could not deserialize iterable/collection structure of ${valueType.getName}")
     }
     else if(recognize[Map[String, Any]](value))

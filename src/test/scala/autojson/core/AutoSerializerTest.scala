@@ -2,9 +2,11 @@ package autojson.core
 
 import java.util
 
+import autojson.core.AutoSerializer.toJson
 import example1._
 import example2.{Captain, Pilot, Scientist, Spaceship}
 import example3.{Assemblyman, City, Councilor, Mayor}
+import example4.Foo
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -22,7 +24,7 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
   val b2r1 = new Room()
   val b2r2 = new Room()
   val build2 = new Building("b2", Set(b2r1, b2r2).asJava)
-  val buildings: util.Set[Building] = Set(build1, build2).asJava
+  val buildings: util.List[Building] = List(build1, build2).asJava
   val workers: util.Set[Person] = Set(bl, in, en).asJava
   val cs = new ConstructionSite(workers, buildings)
   "AutoSerializer" should "serialize and deserialize a java object while ignoring parameter-less methods" in {
@@ -64,6 +66,12 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     city.name shouldEqual cityFromJson.name
     city.foundingYear shouldEqual cityFromJson.foundingYear
     compareConstructionSites(city.constructionSite, cs)
+  }
+
+  "AutoSerializer" should "serialize and deserialize a class with a map structure" in {
+    val foo = new Foo(Map("a" -> 1))
+    val f2 = AutoDeserializer.jsonToObject(toJson(foo), foo.getClass)
+    f2.m shouldEqual foo.m
   }
 
   private def compareConstructionSites(cs1: ConstructionSite, cs2: ConstructionSite): Unit = {
