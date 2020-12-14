@@ -68,18 +68,27 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     compareConstructionSites(city.constructionSite, cs)
   }
 
-  "AutoSerializer" should "serialize and deserialize a class with a map structure" in {
+  "AutoSerializer" should "serialize and deserialize a class with a map structure and handle collections of objects" in {
     val foo = new Foo(Map("a" -> 1).asJava)
     val f2 = AutoDeserializer.jsonToObject(toJson(foo), foo.getClass)
     f2.m shouldEqual foo.m
     val bar = new Bar(Map("a" -> 1))
     val b2 = AutoDeserializer.jsonToObject(toJson(bar), bar.getClass)
     b2.m shouldEqual bar.m
+    val map = new util.HashMap[Foo, Bar]()
+    map.put(foo, bar)
+    AutoSerializer.toJson(map) shouldEqual "{\"elements\":[{\"key\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},\"value\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}}],\"className\":\"java.util.HashMap\"}"
+    AutoSerializer.toJson(Map(foo -> bar)) shouldEqual "{\"elements\":[{\"key\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},\"value\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}}],\"className\":\"scala.collection.immutable.Map1\"}"
+    AutoSerializer.toJson(List(foo, bar)) shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}],\"className\":\"scala.collection.immutable.$colon$colon\"}"
+    val arr = new util.ArrayList[Object]()
+    arr.add(foo)
+    arr.add(bar)
+    AutoSerializer.toJson(arr) shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}],\"className\":\"java.util.ArrayList\"}"
   }
 
   private def compareConstructionSites(cs1: ConstructionSite, cs2: ConstructionSite): Unit = {
     cs1.buildings.asScala.map(_.id) shouldEqual cs2.buildings.asScala.map(_.id)
-    val result1 =  cs1.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
+    val result1 = cs1.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
     val result2 = cs2.workers.asScala.map(_.asInstanceOf[Worker]).map(w => (w.age, w.id, w.name, w.getClass.getSimpleName))
     result1 shouldEqual result2
   }

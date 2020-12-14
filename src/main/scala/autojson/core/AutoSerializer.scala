@@ -5,7 +5,7 @@ import java.util
 
 import autojson.core.Utils._
 import org.json4s.DefaultFormats
-import org.json4s.native.Json
+import org.json4s.native.{Json, JsonMethods}
 
 import scala.jdk.CollectionConverters._
 
@@ -13,7 +13,38 @@ object AutoSerializer {
 
   // Note, when converting a map structure to a JSON string, the order in which the key/value pairs appear may vary
   // The variation depends on the implicit Map ordering
-  def toJson(inputObject: Object, prettyPrint: Boolean = false): String = {
+  def toJson(inputObject: Object, prettyPrint: Boolean = false) : String = {
+    val rawStrOpt = inputObject match {
+      case map: Map[_,_] =>
+        Some(parseMap(map.asInstanceOf[Map[Object, Object]], map.getClass))
+      case map: java.util.Map[_, _] =>
+        Some(parseMap(map.asScala.toMap.asInstanceOf[Map[Object, Object]], map.getClass))
+      case iterable: Iterable[_] =>
+        val iterableStr = iterable.toList.map(x => toJsonHelper(x.asInstanceOf[Object])).mkString(",")
+        Some(s"""{"elements": [$iterableStr], "className":"${iterable.getClass.getCanonicalName}"}""")
+      case coll: util.Collection[_] =>
+        val collectionStr = coll.asScala.toList.map(x => toJsonHelper(x.asInstanceOf[Object])).mkString(",")
+        Some(s"""{"elements": [$collectionStr], "className":"${coll.getClass.getCanonicalName}"}""")
+      case _ => None
+    }
+    val parsedStr = rawStrOpt match {
+      case Some(rawStr) => JsonMethods.parse(rawStr)
+      case None => toMap(inputObject)
+    }
+    if(prettyPrint)
+      Json(DefaultFormats).writePretty(parsedStr)
+    else
+      Json(DefaultFormats).write(parsedStr)
+  }
+
+  private def parseMap(map: Map[Object, Object], cls: Class[_]): String = {
+    val listOfMaps = map.map{ case (k ,v) =>
+      s"""{"key":${toJsonHelper(k)}, "value":${toJsonHelper(v)}}"""
+    }
+    s"""{"elements":[${listOfMaps.toList.mkString(",")}],"className":"${cls.getPackage.getName}.${cls.getSimpleName}"}"""
+  }
+
+  private def toJsonHelper(inputObject: Object, prettyPrint: Boolean = false): String = {
     val map = toMap(inputObject)
     if(prettyPrint)
       Json(DefaultFormats).writePretty(map)

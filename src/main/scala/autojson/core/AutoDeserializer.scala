@@ -103,7 +103,7 @@ object AutoDeserializer {
             if(isPrimitive(mKey)) mKey
             else {
               val map = mKey.asInstanceOf[Map[String,Any]]
-              val packageName = valueType.getPackage.toString.split(" ").last
+              val packageName = valueType.getPackage.getName
               val subType = Class.forName(s"$packageName.${map("className").toString}")
               mapToObject(mKey.asInstanceOf[Map[String,Any]], subType)
             }
@@ -111,7 +111,7 @@ object AutoDeserializer {
             if(isPrimitive(mKey)) mValue
             else {
               val map = mValue.asInstanceOf[Map[String,Any]]
-              val packageName = valueType.getPackage.toString.split(" ").last
+              val packageName = valueType.getPackage.getName
               val subType = Class.forName(s"$packageName.${map("className").toString}")
               mapToObject(mValue.asInstanceOf[Map[String,Any]], subType)
             }

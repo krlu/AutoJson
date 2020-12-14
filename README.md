@@ -8,7 +8,8 @@ Advantages over google GSON and Jackson Object Mapper:
 
 Upcoming features: 
 - Support for Scala Case classes 
-- Support for serialization/deserialization of Objects wrapped in collections
+- Support for deserialization of Objects wrapped in collections
+- Support for Tuples
 
 ## Java Example 
 Consider the `ConstructionSite` Java class and its associated objects
