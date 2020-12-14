@@ -1,10 +1,21 @@
 # Auto-JSON 
-Analyzes your Java/Scala object at runtime and serializes/deserializes to/from JSON.
+Analyzes your Java/Scala object at runtime and serializes/deserializes to/from JSON. 
+Without having to manually write serializer/deserialize boiler-plate
 
-Advantages over google GSON and Jackson Object Mapper: 
+Core Feature: 
 - Handles mixtures of Scala and Java objects by differentiating between language annotations
 - Handles deserialization for Interface Types by preserving implementing classes labels in the JSON serialization.
-- Lightweight, only relies on the Json4s dependency
+- Builds on top of the Json4s library
+
+Advantages over other libraries:
+
+|                           Feature                              |     AutoJson  |      GSON     |     Json4S    |  PlayJson   |   FlexJson  |    
+| ---------------------------------------------------------------| ------------- | ------------- | ------------- | ------------| ------------|
+| De-serial/Serializing Scala Objects                            |      Yes      |      Yes      |       Yes     |      No     |      No     |
+| De-serial/Serializing Java Objects                             |      Yes      |      Yes      |       No      |      No     |      No     |
+| De-serial/Serializing Scala and Java mixed objects             |      Yes      |      No       |       No      |      No     |      No     |
+| De-serializing For Classes with Abstract/Interface field Types |      Yes      |      No       |       No      |      No     |      No     |
+
 
 Upcoming features: 
 - Support for Scala Case classes 
@@ -54,7 +65,7 @@ public class BrickLayer extends Worker {
 }
 
 ```
-If auto-json is on your java classpath you can serialize the `ConstructionSite` as follows:
+If auto-json is on your classpath you can serialize `ConstructionSite` as follows:
 ```
 import autojson.core
 import example1._
@@ -127,7 +138,7 @@ csJsonString should have the following format:
 }
 ```
 You can save the above string to a JSON file, then read from said file to recover the string.\
-Finally, you can deserialize back to a `ConstructionSite` with the code below.\
+Finally, you can deserialize back to a `ConstructionSite` with the code below.
 ```
 import autojson.core
 import example1.ConstructionSite
@@ -178,9 +189,7 @@ spJsonString should have the following format:
   "className":"Spaceship"
 }
 ```
-Deserialization is also similar to the java example\
-Notice that we put all classes related to `SpaceShip` in the `Example2` package
-
+Deserialization is also similar to the java example
 ```
 import autojson.core
 import example2.Spaceship
