@@ -7,8 +7,8 @@ Advantages over google GSON and Jackson Object Mapper:
 - Lightweight, only relies on the Json4s dependency
 
 Upcoming features: 
-- Support for `Map` type  objects in both Scala and Java
 - Support for Scala Case classes 
+- Support for serialization/deserialization of Objects wrapped in collections
 
 ## Java Example 
 Consider the `ConstructionSite` Java class and its associated objects

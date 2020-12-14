@@ -59,10 +59,7 @@ object AutoSerializer {
         val map = memberValue.asInstanceOf[util.Map[Object, Object]].asScala.toMap
         createMapOfMap(map)
       }
-      else {
-        println("line 73")
-        toMap(memberValue)
-      }
+      else toMap(memberValue)
     (memberName, value)
   }
 

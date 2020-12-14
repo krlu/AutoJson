@@ -70,13 +70,16 @@ object AutoDeserializer {
         argMap(param.getName)
       }
       constructor.newInstance(orderedArgs: _*).asInstanceOf[T]
-    }else constructor.newInstance(arguments.map(_._2):_*).asInstanceOf[T]
+    }else {
+      constructor.newInstance(arguments.map(_._2):_*).asInstanceOf[T]
+    }
   }
 
   private def parseArgs(value: Object, valueType: Class[_], genericType: Type, valueName: String): Object = {
+    val isScala = valueType.getAnnotations.exists(annotation => annotation.toString.contains("ScalaSignature"))
     val interfaces = valueType.getInterfaces.map(_.getSimpleName)
     if(isPrimitive(valueType.getSimpleName)) value
-    else if(interfaces.contains("Collection") || interfaces.contains("Iterable")) {
+    else if(interfaces.contains("Collection") || interfaces.contains("Iterable") || valueType.getName.contains("Map")) {
       val typeParam = genericType.asInstanceOf[ParameterizedType].getActualTypeArguments.head
       val typeParamClass = typeParam.asInstanceOf[Class[_]]
       val typeParamName = typeParam.getTypeName.split("\\.").last
@@ -88,13 +91,11 @@ object AutoDeserializer {
         }
       }
       if(valueType.getSimpleName.contains("Set")) {
-        if(interfaces.contains("Iterable")) collection.toSet
-        else collection.toSet.asJava
+        if(isScala) collection.toSet else collection.toSet.asJava
       } else if(valueType.getSimpleName.contains("List"))
-        if(interfaces.contains("Iterable")) collection
-        else collection.asJava
+        if(isScala) collection else collection.asJava
       else if(valueType.getSimpleName.contains("Map")) {
-        value.asInstanceOf[List[_]].map{ element =>
+        val map = value.asInstanceOf[List[_]].map{ element =>
           val mapOfMap = element.asInstanceOf[Map[Object, Object]]
           val mKey = mapOfMap("key")
           val mValue = mapOfMap("value")
@@ -116,8 +117,9 @@ object AutoDeserializer {
             }
           mk -> mv
         }.toMap
-      } else
-        throw new IllegalArgumentException(s"Could not deserialize iterable/collection structure of ${valueType.getName}")
+        if(isScala) map else map.asJava
+      }
+      else throw new IllegalArgumentException(s"Could not deserialize iterable/collection structure of ${valueType.getName}")
     }
     else if(recognize[Map[String, Any]](value))
       mapToObject(value.asInstanceOf[Map[String, Any]], valueType).asInstanceOf[Object]

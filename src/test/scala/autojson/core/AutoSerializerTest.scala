@@ -6,7 +6,7 @@ import autojson.core.AutoSerializer.toJson
 import example1._
 import example2.{Captain, Pilot, Scientist, Spaceship}
 import example3.{Assemblyman, City, Councilor, Mayor}
-import example4.Foo
+import example4.{Bar, Foo}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -69,9 +69,12 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
   }
 
   "AutoSerializer" should "serialize and deserialize a class with a map structure" in {
-    val foo = new Foo(Map("a" -> 1))
+    val foo = new Foo(Map("a" -> 1).asJava)
     val f2 = AutoDeserializer.jsonToObject(toJson(foo), foo.getClass)
     f2.m shouldEqual foo.m
+    val bar = new Bar(Map("a" -> 1))
+    val b2 = AutoDeserializer.jsonToObject(toJson(bar), bar.getClass)
+    b2.m shouldEqual bar.m
   }
 
   private def compareConstructionSites(cs1: ConstructionSite, cs2: ConstructionSite): Unit = {
