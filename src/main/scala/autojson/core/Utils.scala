@@ -12,7 +12,7 @@ object Utils {
       case _ => false
     }
 
-  private[autojson] def isPrimitive(inputString: String): Boolean =
+  private[autojson] def isPrimitiveStr(inputString: String): Boolean =
     Set("int", "double", "integer", "float", "string", "long", "bigint").contains(inputString.toLowerCase())
 
 

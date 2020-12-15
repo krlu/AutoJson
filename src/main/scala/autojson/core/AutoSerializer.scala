@@ -15,13 +15,20 @@ object AutoSerializer {
   // The variation depends on the implicit Map ordering
   def toJson(inputObject: Object, prettyPrint: Boolean = false) : String = {
     val rawStrOpt = inputObject match {
+      case arr: Array[_] =>
+        val arrStr = arr.toList.map(x => toJsonHelper(x.asInstanceOf[Object])).mkString(",")
+        Some(s"""{"elements": [$arrStr], "className":"${inputObject.getClass.getCanonicalName}"}""")
       case map: Map[_,_] =>
         Some(parseMap(map.asInstanceOf[Map[Object, Object]], map.getClass))
       case map: java.util.Map[_, _] =>
         Some(parseMap(map.asScala.toMap.asInstanceOf[Map[Object, Object]], map.getClass))
       case iterable: Iterable[_] =>
         val iterableStr = iterable.toList.map(x => toJsonHelper(x.asInstanceOf[Object])).mkString(",")
-        Some(s"""{"elements": [$iterableStr], "className":"${iterable.getClass.getCanonicalName}"}""")
+        val iterableTypeName = iterable.getClass.getCanonicalName
+        val finalTypeName =
+          if(iterableTypeName.contains("$colon$colon")) s"${iterable.getClass.getPackage.getName}.List"
+          else iterableTypeName
+        Some(s"""{"elements": [$iterableStr], "className":"$finalTypeName"}""")
       case coll: util.Collection[_] =>
         val collectionStr = coll.asScala.toList.map(x => toJsonHelper(x.asInstanceOf[Object])).mkString(",")
         Some(s"""{"elements": [$collectionStr], "className":"${coll.getClass.getCanonicalName}"}""")
@@ -45,6 +52,10 @@ object AutoSerializer {
   }
 
   private def toJsonHelper(inputObject: Object, prettyPrint: Boolean = false): String = {
+    if(inputObject.isInstanceOf[String])
+      return s""""$inputObject""""
+    if(isPrimitive(inputObject))
+      return inputObject.toString
     val map = toMap(inputObject)
     if(prettyPrint)
       Json(DefaultFormats).writePretty(map)
@@ -66,7 +77,7 @@ object AutoSerializer {
         .filter(method => Modifier.isPublic(method.getModifiers) && method.getParameterCount == 0)
         .map(method => parseMember(method.getName, method.invoke(inputObject, List(): _*))).toMap
       }
-    fieldsMap ++ methodsMap ++ Map("className" -> cls.getSimpleName)
+    fieldsMap ++ methodsMap ++ Map("className" -> s"${cls.getCanonicalName}")
   }
 
   private def parseMember(memberName: String, memberValue: Object): (String, Object) = {

@@ -19,7 +19,6 @@ Advantages over other libraries:
 
 Upcoming features: 
 - Support for Scala Case classes 
-- Support for deserialization of Objects wrapped in collections
 - Support for Tuples
 
 ## Java Example 
@@ -142,7 +141,7 @@ Finally, you can deserialize back to a `ConstructionSite` with the code below.
 ```
 import autojson.core
 import example1.ConstructionSite
-val csFromJson: ConstructionSite = AutoSerializer.jsonToObject(csJsonString, classOf[ConstructionSite])
+val csFromJson: ConstructionSite = AutoSerializer.toObject(csJsonString, classOf[ConstructionSite])
 ``` 
 
 ## Scala Example
@@ -193,5 +192,5 @@ Deserialization is also similar to the java example
 ```
 import autojson.core
 import example2.Spaceship
-val spaceShipFromJson: SpaceShip = AutoSerializer.jsonToObject(spaceShipJsonString, classOf[Spaceship])
+val spaceShipFromJson: SpaceShip = AutoSerializer.toObject(spaceShipJsonString, classOf[Spaceship])
 ```

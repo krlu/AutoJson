@@ -31,15 +31,17 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val csJsonString = AutoSerializer.toJson(cs)
     val gtString =
       "{\"workers\":[" +
-        "{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"BrickLayer\"}," +
-        "{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"Inspector\"}," +
-        "{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"Engineer\"}]," +
+        "{\"name\":\"Brandie\",\"id\":\"asdf\",\"age\":100,\"className\":\"example1.BrickLayer\"}," +
+        "{\"name\":\"Ivan\",\"id\":\"qwer\",\"age\":100,\"className\":\"example1.Inspector\"}," +
+        "{\"name\":\"Eugenia\",\"id\":\"uiop\",\"age\":100,\"className\":\"example1.Engineer\"}]," +
       "\"buildings\":[" +
-        "{\"id\":\"b1\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}," +
-        "{\"id\":\"b2\",\"rooms\":[{\"className\":\"Room\"},{\"className\":\"Room\"}],\"className\":\"Building\"}]," +
-      "\"className\":\"ConstructionSite\"}"
+        "{\"id\":\"b1\",\"rooms\":[{\"className\":\"example1.Room\"}," +
+        "{\"className\":\"example1.Room\"}],\"className\":\"example1.Building\"}," +
+        "{\"id\":\"b2\",\"rooms\":[{\"className\":\"example1.Room\"}," +
+        "{\"className\":\"example1.Room\"}],\"className\":\"example1.Building\"}]," +
+      "\"className\":\"example1.ConstructionSite\"}"
     csJsonString shouldEqual gtString
-    val csFromJson: ConstructionSite = AutoDeserializer.jsonToObject(csJsonString, classOf[ConstructionSite])
+    val csFromJson: ConstructionSite = AutoDeserializer.toObject(csJsonString, classOf[ConstructionSite])
     csFromJson.workers.asScala.toList.foreach{ w =>
       assert(List("BrickLayer", "Inspector", "Engineer").contains(w.getClass.getSimpleName))
     }
@@ -53,7 +55,7 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val crewMembers = Set(new Captain("luffy", 100), new Scientist("nami", 200), new Pilot("Usop", 300))
     val spaceShip = new Spaceship(3.14, crewMembers)
     val spaceShipJsonString = AutoSerializer.toJson(spaceShip)
-    val spaceShipFromJson: Spaceship = AutoDeserializer.jsonToObject(spaceShipJsonString, classOf[Spaceship])
+    val spaceShipFromJson: Spaceship = AutoDeserializer.toObject(spaceShipJsonString, classOf[Spaceship])
     spaceShip.weight shouldEqual spaceShipFromJson.weight
     spaceShip.crewMembers.map(crew => (crew.name, crew.age)) shouldEqual spaceShipFromJson.crewMembers.map(crew => (crew.name, crew.age))
   }
@@ -62,7 +64,7 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     val crewMembers = Set(new Mayor("Spike", 100), new Councilor("Faye", 200), new Assemblyman("Edward", 300))
     val city = new City("GrandLine", 1999, crewMembers, cs)
     val cityJsonString = AutoSerializer.toJson(city, prettyPrint = true)
-    val cityFromJson: City = AutoDeserializer.jsonToObject(cityJsonString, classOf[City])
+    val cityFromJson: City = AutoDeserializer.toObject(cityJsonString, classOf[City])
     city.name shouldEqual cityFromJson.name
     city.foundingYear shouldEqual cityFromJson.foundingYear
     compareConstructionSites(city.constructionSite, cs)
@@ -70,20 +72,51 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
 
   "AutoSerializer" should "serialize and deserialize a class with a map structure and handle collections of objects" in {
     val foo = new Foo(Map("a" -> 1).asJava)
-    val f2 = AutoDeserializer.jsonToObject(toJson(foo), foo.getClass)
+    val f2 = AutoDeserializer.toObject(toJson(foo), foo.getClass)
     f2.m shouldEqual foo.m
     val bar = new Bar(Map("a" -> 1))
-    val b2 = AutoDeserializer.jsonToObject(toJson(bar), bar.getClass)
+    val b2 = AutoDeserializer.toObject(toJson(bar), bar.getClass)
     b2.m shouldEqual bar.m
-    val map = new util.HashMap[Foo, Bar]()
-    map.put(foo, bar)
-    AutoSerializer.toJson(map) shouldEqual "{\"elements\":[{\"key\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},\"value\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}}],\"className\":\"java.util.HashMap\"}"
-    AutoSerializer.toJson(Map(foo -> bar)) shouldEqual "{\"elements\":[{\"key\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},\"value\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}}],\"className\":\"scala.collection.immutable.Map1\"}"
-    AutoSerializer.toJson(List(foo, bar)) shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}],\"className\":\"scala.collection.immutable.$colon$colon\"}"
-    val arr = new util.ArrayList[Object]()
-    arr.add(foo)
-    arr.add(bar)
-    AutoSerializer.toJson(arr) shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"Bar\"}],\"className\":\"java.util.ArrayList\"}"
+    val jMap = new util.HashMap[Foo, Bar]()
+    jMap.put(foo, bar)
+    val sMap = Map(foo -> bar)
+    val sList = List(foo, bar)
+    val sSet = Set(foo, bar)
+    val jList = new util.ArrayList[Object]()
+    jList.add(foo)
+    jList.add(bar)
+
+    val jMapJson = AutoSerializer.toJson(jMap)
+    val sMapJson = AutoSerializer.toJson(sMap)
+    val sListJson = AutoSerializer.toJson(sList)
+    val jListJson = AutoSerializer.toJson(jList)
+    val sSetJson = AutoSerializer.toJson(sSet)
+
+    jMapJson shouldEqual "{\"elements\":[{\"key\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},\"value\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}}],\"className\":\"java.util.HashMap\"}"
+    sMapJson shouldEqual "{\"elements\":[{\"key\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},\"value\":{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}}],\"className\":\"scala.collection.immutable.Map1\"}"
+    sListJson shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}],\"className\":\"scala.collection.immutable.List\"}"
+    jListJson shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}],\"className\":\"java.util.ArrayList\"}"
+    sSetJson shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}],\"className\":\"scala.collection.immutable.Set.Set2\"}"
+    val restoredJMap = AutoDeserializer.toCollection(jMapJson, classOf[(Foo, Bar)]).asInstanceOf[Map[Foo, Bar]]
+    restoredJMap.keySet.map(_.m) shouldEqual jMap.keySet().asScala.toSet.map{f : Foo => f.m}
+    restoredJMap.values.toSet.map{b: Bar => b.m} shouldEqual jMap.values().asScala.toSet.map{b: Bar => b.m}
+
+    val restoredSMap = AutoDeserializer.toCollection(sMapJson, classOf[(Foo, Bar)]).asInstanceOf[Map[Foo, Bar]]
+    restoredSMap.keySet.map(_.m) shouldEqual sMap.keySet.map{ f : Foo => f.m}
+    restoredSMap.values.toSet.map{b: Bar => b.m} shouldEqual sMap.values.toSet.map{b: Bar => b.m}
+
+    val restoredJList: Seq[Object] = AutoDeserializer.toCollection(jListJson, classOf[Object]).asInstanceOf[List[Object]]
+    restoredJList.head.asInstanceOf[Foo].m shouldEqual jList.get(0).asInstanceOf[Foo].m
+    restoredJList(1).asInstanceOf[Bar].m shouldEqual  jList.get(1).asInstanceOf[Bar].m
+
+    val restoredSList: Seq[Object] = AutoDeserializer.toCollection(sListJson, classOf[Object]).asInstanceOf[List[Object]]
+    restoredSList.head.asInstanceOf[Foo].m shouldEqual sList.head.asInstanceOf[Foo].m
+    restoredSList(1).asInstanceOf[Bar].m shouldEqual sList(1).asInstanceOf[Bar].m
+
+    val restoredJSet = AutoDeserializer.toCollection(sSetJson, classOf[Object])
+    restoredJSet.find(f =>f.isInstanceOf[Foo]).get.asInstanceOf[Foo].m == foo.m
+    restoredJSet.find(b =>b.isInstanceOf[Bar]).get.asInstanceOf[Bar].m == bar.m
+
   }
 
   private def compareConstructionSites(cs1: ConstructionSite, cs2: ConstructionSite): Unit = {

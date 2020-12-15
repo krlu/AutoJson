@@ -11,10 +11,44 @@ import scala.jdk.CollectionConverters._
 
 object AutoDeserializer {
 
-  def jsonToObject[T](jsonString: String, classOf: Class[T]): T = {
-    implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
-    val map = parse(jsonString).extract[Map[String, Any]]
-    mapToObject(convert(map), classOf)
+  private implicit val formats: DefaultFormats.type = org.json4s.DefaultFormats
+
+  def toCollection[T](jsonString: String, cls: Class[T]): Iterable[T] = {
+    val map = convert(parse(jsonString).extract[Map[String, Any]])
+    val collectionTypeName = map("className").toString
+    if(collectionTypeName.contains("List") || collectionTypeName.contains("[]"))
+      map("elements").asInstanceOf[List[Object]].map(element => toCollectionHelper(element).asInstanceOf[T])
+    else if(collectionTypeName.contains("Set"))
+      map("elements").asInstanceOf[List[Object]].toSet.map{ element: Object => toCollectionHelper(element).asInstanceOf[T]}
+    else{
+      map("elements").asInstanceOf[List[Map[String, Object]]].map{m =>
+        val key = m("key")
+        val value = m("value")
+        toCollectionHelper(key) -> toCollectionHelper(value)
+      }.toMap.asInstanceOf[Iterable[T]]
+    }
+  }
+
+  private def toCollectionHelper(obj: Object): Any = {
+    if(recognize[Map[String, Any]](obj)){
+      val map = obj.asInstanceOf[Map[String, Any]]
+      mapToObject(map, Class.forName(map("className").toString))
+    }
+    else toObject(obj.toString, obj.getClass)
+  }
+
+  def toObject[T](jsonString: String, cls: Class[T]): T = {
+    val className = cls.getSimpleName.toLowerCase
+    if(className.contains("int"))
+      jsonString.toInt.asInstanceOf[T]
+    else if(className.contains("double"))
+      jsonString.toDouble.asInstanceOf[T]
+    else if(className.contains("string"))
+      jsonString.asInstanceOf[T]
+    else {
+      val map = parse(jsonString).extract[Map[String, Any]]
+      mapToObject(convert(map), cls)
+    }
   }
 
   private def convert(map: Map[String, Any]): Map[String, Any] = {
@@ -46,7 +80,7 @@ object AutoDeserializer {
     val isAbstract = Modifier.isAbstract(classOf.asInstanceOf[Class[_]].getModifiers)
     val isInterface = classOf.isInterface
     if(isAbstract || isInterface){
-      val subType = Class.forName(s"$packageName.${map("className").toString}").asInstanceOf[Class[T]]
+      val subType = Class.forName(s"${map("className").toString}").asInstanceOf[Class[T]]
       return mapToObject(map, subType)
     }
     val methodArgs = methods.filter(m => map.contains(m.getName)).map{ method =>
@@ -78,13 +112,13 @@ object AutoDeserializer {
   private def parseArgs(value: Object, valueType: Class[_], genericType: Type, valueName: String): Object = {
     val isScala = valueType.getAnnotations.exists(annotation => annotation.toString.contains("ScalaSignature"))
     val interfaces = valueType.getInterfaces.map(_.getSimpleName)
-    if(isPrimitive(valueType.getSimpleName)) value
+    if(isPrimitiveStr(valueType.getSimpleName)) value
     else if(interfaces.contains("Collection") || interfaces.contains("Iterable") || valueType.getName.contains("Map")) {
       val typeParam = genericType.asInstanceOf[ParameterizedType].getActualTypeArguments.head
       val typeParamClass = typeParam.asInstanceOf[Class[_]]
       val typeParamName = typeParam.getTypeName.split("\\.").last
       val collection = value.asInstanceOf[List[Any]].map { element =>
-        if(isPrimitive(typeParamName)){
+        if(isPrimitiveStr(typeParamName)){
           element
         } else {
           mapToObject(element.asInstanceOf[Map[String, Any]], typeParamClass)
