@@ -97,26 +97,26 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
     sListJson shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}],\"className\":\"scala.collection.immutable.List\"}"
     jListJson shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}],\"className\":\"java.util.ArrayList\"}"
     sSetJson shouldEqual "{\"elements\":[{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Foo\"},{\"m\":[{\"key\":\"a\",\"value\":1}],\"className\":\"example4.Bar\"}],\"className\":\"scala.collection.immutable.Set.Set2\"}"
-    val restoredJMap = AutoDeserializer.toCollection(jMapJson, classOf[(Foo, Bar)]).asInstanceOf[Map[Foo, Bar]]
+
+    val restoredJMap = AutoDeserializer.toObject(jMapJson, classOf[Map[Foo, Bar]])
     restoredJMap.keySet.map(_.m) shouldEqual jMap.keySet().asScala.toSet.map{f : Foo => f.m}
     restoredJMap.values.toSet.map{b: Bar => b.m} shouldEqual jMap.values().asScala.toSet.map{b: Bar => b.m}
 
-    val restoredSMap = AutoDeserializer.toCollection(sMapJson, classOf[(Foo, Bar)]).asInstanceOf[Map[Foo, Bar]]
+    val restoredSMap = AutoDeserializer.toObject(sMapJson, classOf[Map[Foo, Bar]])
     restoredSMap.keySet.map(_.m) shouldEqual sMap.keySet.map{ f : Foo => f.m}
     restoredSMap.values.toSet.map{b: Bar => b.m} shouldEqual sMap.values.toSet.map{b: Bar => b.m}
 
-    val restoredJList: Seq[Object] = AutoDeserializer.toCollection(jListJson, classOf[Object]).asInstanceOf[List[Object]]
+    val restoredJList: Seq[Object] = AutoDeserializer.toObject(jListJson, classOf[List[Object]])
     restoredJList.head.asInstanceOf[Foo].m shouldEqual jList.get(0).asInstanceOf[Foo].m
     restoredJList(1).asInstanceOf[Bar].m shouldEqual  jList.get(1).asInstanceOf[Bar].m
 
-    val restoredSList: Seq[Object] = AutoDeserializer.toCollection(sListJson, classOf[Object]).asInstanceOf[List[Object]]
+    val restoredSList: Seq[Object] = AutoDeserializer.toObject(sListJson, classOf[List[Object]])
     restoredSList.head.asInstanceOf[Foo].m shouldEqual sList.head.asInstanceOf[Foo].m
     restoredSList(1).asInstanceOf[Bar].m shouldEqual sList(1).asInstanceOf[Bar].m
 
-    val restoredJSet = AutoDeserializer.toCollection(sSetJson, classOf[Object])
+    val restoredJSet = AutoDeserializer.toObject(sSetJson, classOf[Set[_]])
     restoredJSet.find(f =>f.isInstanceOf[Foo]).get.asInstanceOf[Foo].m == foo.m
     restoredJSet.find(b =>b.isInstanceOf[Bar]).get.asInstanceOf[Bar].m == bar.m
-
   }
 
   private def compareConstructionSites(cs1: ConstructionSite, cs2: ConstructionSite): Unit = {

@@ -82,9 +82,8 @@ object AutoSerializer {
 
   private def parseMember(memberName: String, memberValue: Object): (String, Object) = {
     val value =
-      if(isPrimitive(memberValue)) {
+      if(isPrimitive(memberValue))
         memberValue
-      }
       else if(memberValue.isInstanceOf[Map[_,_]]){
         val map = memberValue.asInstanceOf[Map[Object, Object]]
         createMapOfMap(map)
