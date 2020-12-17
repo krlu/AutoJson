@@ -7,14 +7,15 @@ Core Feature:
 - Handles deserialization for Interface Types by preserving implementing classes labels in the JSON serialization.
 - Builds on top of the Json4s library
 
-Advantages over other libraries:
+Advantages over other JVM JSON libraries:
 
-|                           Feature                              |     AutoJson  |      GSON     |     Json4S    |  PlayJson   |   FlexJson  |    
-| ---------------------------------------------------------------| ------------- | ------------- | ------------- | ------------| ------------|
-| De-serial/Serializing Scala Objects                            |      Yes      |      Yes      |       Yes     |      No     |      No     |
-| De-serial/Serializing Java Objects                             |      Yes      |      Yes      |       No      |      No     |      No     |
-| De-serial/Serializing Scala and Java mixed objects             |      Yes      |      No       |       No      |      No     |      No     |
-| De-serializing For Classes with Abstract/Interface field Types |      Yes      |      No       |       No      |      No     |      No     |
+|                           Feature                              |     AutoJson  |    Jackson    |     GSON      |     Json4s    |  PlayJson   |   FlexJson  |    
+| ---------------------------------------------------------------| ------------- | ------------- | ------------- | ------------- | ------------| ------------|
+| De-serial/Serializing Scala Objects                            |      Yes      |      Yes      |      Yes      |       Yes     |      No     |      No     |
+| De-serial/Serializing Java Objects                             |      Yes      |      Yes      |      Yes      |       No      |      No     |      No     |
+| De-serial/Serializing Scala and Java mixed objects             |      Yes      |      Yes      |      No       |       No      |      No     |      No     |
+| De-serializing For Classes with Abstract/Interface field Types |      Yes      |      Yes      |      No       |       No      |      No     |      No     |
+| De-serializing Without Need for Manual Annotations             |      Yes      |      No       |      No       |       No      |      No     |      No     |
 
 
 Upcoming features: 
