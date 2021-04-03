@@ -61,8 +61,8 @@ class AutoSerializerTest extends AnyFlatSpec with Matchers{
   }
 
   "AutoSerializer" should "serialize and deserialize a scala object with an underlying java field in different package" in {
-    val crewMembers = Set(new Mayor("Spike", 100), new Councilor("Faye", 200), new Assemblyman("Edward", 300))
-    val city = new City("GrandLine", 1999, crewMembers, cs)
+    val govMembers = Set(new Mayor("Spike", 100), new Councilor("Faye", 200), new Assemblyman("Edward", 300))
+    val city = new City("GrandLine", 1999, govMembers, cs)
     val cityJsonString = AutoSerializer.toJson(city, prettyPrint = true)
     val cityFromJson: City = AutoDeserializer.toObject(cityJsonString, classOf[City])
     city.name shouldEqual cityFromJson.name
